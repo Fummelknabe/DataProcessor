@@ -1,0 +1,4 @@
+name = "DataProcessor"
+uuid = "48c2811d-e27e-43fd-bdef-47a627259bfa"
+authors = ["martin.rolfs <martin.rolfs@student.uni-luebeck.de>"]
+version = "0.1.0"
