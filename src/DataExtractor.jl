@@ -48,11 +48,17 @@ end
 
 function loadFromJSon(rotateCameraCoords::Bool, path::String)
     posData = StructArray(PositionalData[])
-    posDataDicts = JSON.parsefile(path, dicttype=Dict, inttype=Int64)
+    try
+        posDataDicts = JSON.parsefile(path, dicttype=Dict, inttype=Int64)
 
-    for dict in posDataDicts        
-        push!(posData, convertDictToPosData(dict, rotateCameraCoords))
+        for dict in posDataDicts        
+            push!(posData, convertDictToPosData(dict, rotateCameraCoords))
+        end
+    catch e
+        if e isa SystemError
+            @warn "The given file does not exist."
+        end
     end
-    
+
     return posData
 end
