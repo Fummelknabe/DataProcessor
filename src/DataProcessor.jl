@@ -25,29 +25,42 @@ export getLength
 getLength() = @info "Length of stack: " * string(length(trainData))
 
 export train
-function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterationsBetterValue=100)
+function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100)
     len = length(trainData)
     if len == 0
         @error "No data was added to the stack! Cannot train."
         return
     end
 
+    # Starting Parameters
     params = PredictionParameters()
     @info "Training with $(len) data points..."
     @info "Start parameter: $(params)"
     
-    meanError = Inf64
+    # Error with starting parameters
+    meanError = calculateError(trainData, params)
+    @info "Error of starting params: $(meanError)"
     i = 0
 
-    while meanError > minError || i == maxIterations
-        newMeanError = calculateError(trainData, params)
+    while meanError > minError && i < maxIterations
         inner_i = 0
         do 
-            newParams = getNewParams(params)
-            inner_i += 1
-        while newMeanError > meanError || inner_i > maxIterationsBetterValue end
+            P = getNewParams(params)
+            newMeanError = Inf64
 
-        if inner_i > maxIterationsBetterValue
+            for p ∈ P
+                e = calculateError(trainData, p)
+
+                # if new error is smaller take parameter
+                if e < newMeanError
+                    newMeanError = e
+                    params = p
+                end
+            end
+            inner_i += 1
+        while newMeanError > meanError && inner_i < maxIterChangeParams end
+
+        if inner_i == maxIterChangeParams
             @info "No better Value was found -> local minima!"
             return params
         end
