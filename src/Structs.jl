@@ -48,4 +48,22 @@ mutable struct PredictionParameters
 
     # Beginning parameters (Maybe change with random restart)
     PredictionParameters() = new(false, false, 5, false, 5, false, 0.075, 0.33, 0.66, 0.0, 0.1, 0.0, 0.1, 0.0, 1/3)
+
+    PredictionParameters(params::PredictionParameters) = new(
+        params.kalmanFilterCamera,
+        params.kalmanFilterGyro,
+        params.exponentCC,
+        params.useSinCC,
+        params.speedExponentCC,
+        params.speedSinCC,
+        params.steerAngleFactor,
+        params.odoSteerFactor,
+        params.odoGyroFactor,
+        params.odoMagFactor,
+        params.processNoiseC,
+        params.measurementNoiseC,
+        params.processNoiseG,
+        params.measurementNoiseG,
+        params.σ_forSpeedKernel
+    )
 end
