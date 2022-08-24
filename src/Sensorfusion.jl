@@ -1,9 +1,8 @@
 using DSP
-using LinearAlgebra
 
 predictedStates = StructArray(PositionalState[])
 
-rateCameraConfidence(cc, exponent, useSin::Bool) = useSin ? sin(π/2 * cc)^exponent : cc^exponent 
+rateCameraConfidence(cc, exponent, useSin::Bool) = Float32(useSin ? sin(π/2 * cc)^exponent : cc^exponent) 
 
 # linearized system matrices
 F_c(state::PositionalState, u::PositionalData) = [1 0 0 -u.deltaTime*state.v*sin(state.Ψ) 0;
@@ -213,19 +212,4 @@ function predictFromRecordedData(posData::StructVector{PositionalData}, settings
       end
 
       return predictedStates
-end
-
-"""
-Start sensor fusion with a continuous flow of data.
-
-# Arguments
-- `posData::StructVector{PositionalData}`: The last recorded data points. Length should be more than 1.
-"""
-function initializeSensorFusion(posData::StructVector{PositionalData}, settings::PredictionParameters)
-      if length(predictedStates) == 0
-            # Set first state
-            global predictedStates[1] = PositionalState(posData[1].cameraPos[1:3], posData[1].sensorSpeed, Matrix(I, 5, 5), Matrix(I, 2, 2), convertMagToCompass(posData[1].imuMag), θ_acc(0.0, 1.0, posData[1].imuAcc))
-      end
-
-      push!(predictedStates, predict(predictedStates[length(predictedStates)  - 1], posData, settings))
 end

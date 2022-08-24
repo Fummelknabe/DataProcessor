@@ -1,6 +1,7 @@
 module DataProcessor
 
 using StructArrays
+using LinearAlgebra
 
 export loadDataToStack
 """
@@ -31,11 +32,16 @@ function train()
         return
     end
 
+    params = PredictionParameters()
     @info "Training with $(len) data points..."
+    @info "Start parameter: $(params)"
+    meanError = calculateError(trainData, params)
+    println(meanError)
 end
 
 include("Structs.jl")
 include("Sensorfusion.jl")
+include("HillClimbing.jl")
 include("DataExtractor.jl")
 trainData = Vector{typeof(StructArray(PositionalData[]))}(undef, 0);
 

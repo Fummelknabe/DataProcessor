@@ -33,7 +33,7 @@ mutable struct PredictionParameters
     kalmanFilterCamera::Bool
     kalmanFilterGyro::Bool
     exponentCC::Float32
-    useSinCC::Bool              # false
+    useSinCC::Bool          
     speedExponentCC::Float32   
     speedSinCC::Bool
     steerAngleFactor::Float32
@@ -44,5 +44,8 @@ mutable struct PredictionParameters
     measurementNoiseC::Float32
     processNoiseG::Float32
     measurementNoiseG::Float32
-    σ_forSpeedKernel::Float32   # 1/3
+    σ_forSpeedKernel::Float32   
+
+    # Beginning parameters (Maybe change with random restart)
+    PredictionParameters() = new(false, false, 5, false, 5, false, 0.075, 0.33, 0.66, 0.0, 0.1, 0.0, 0.1, 0.0, 1/3)
 end
