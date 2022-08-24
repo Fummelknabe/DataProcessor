@@ -28,11 +28,14 @@ mutable struct PositionalState
     θ::Float32
 end
 
-export PredictionSettings
-mutable struct PredictionSettings
+export PredictionParameters
+mutable struct PredictionParameters
     kalmanFilterCamera::Bool
     kalmanFilterGyro::Bool
     exponentCC::Float32
+    useSinCC::Bool              # false
+    speedExponentCC::Float32   
+    speedSinCC::Bool
     steerAngleFactor::Float32
     odoSteerFactor::Float32
     odoGyroFactor::Float32
@@ -41,4 +44,5 @@ mutable struct PredictionSettings
     measurementNoiseC::Float32
     processNoiseG::Float32
     measurementNoiseG::Float32
+    σ_forSpeedKernel::Float32   # 1/3
 end
