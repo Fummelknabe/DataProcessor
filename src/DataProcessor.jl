@@ -65,9 +65,11 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
             return params
         end
 
+        meanError = newMeanError
         i += 1
     end
 
+    @info "Training finished with mean error: $(newMeanError) and Parameters: $(params)"
     return params
 end
 
