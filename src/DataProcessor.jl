@@ -2,12 +2,11 @@ module DataProcessor
 
 using StructArrays
 using LinearAlgebra
+using ProgressMeter
 
 export loadDataToStack
 """
 Loads a new JSOn File in RAM as Struct Array from PositionalData.
-C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/big_loop_park_sunny_maxW.json
-C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/eight_park_spatial_memory.json
 
 # Arguments
 - `path::String`: The path to the .json file where the data is stored. 
@@ -42,7 +41,9 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
     # Error with starting parameters
     meanError = calculateError(trainData, params)
     @info "Error of starting params: $(meanError)"
+
     i = 0
+    prog = Progress(maxIterations, 1, "Training...", 50)
 
     while meanError > minError && i < maxIterations
         inner_i = 0
@@ -70,13 +71,16 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
         end
 
         if inner_i == maxIterChangeParams
-            @info "No better Value was found -> local minima!"
+            println()
+            @info "No better Value was found -> local minima with Parameters: $(params)"
             return params
         end
 
         i += 1
+        next!(prog)
     end
 
+    println()
     @info "Training finished with mean error: $(newMeanError) and Parameters: $(params)"
     return params
 end
