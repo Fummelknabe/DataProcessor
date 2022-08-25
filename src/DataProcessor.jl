@@ -10,9 +10,10 @@ C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/po
 
 # Arguments
 - `path::String`: The path to the .json file where the data is stored. 
+- `rotateCameraCoords::Bool`: Rotate the camera position so it fits onto prediction.
 """
-function loadDataToStack(path::String)
-    posData = loadFromJSon(true, path);
+function loadDataToStack(path::String; rotateCameraCoords::Bool=true)
+    posData = loadFromJSon(rotateCameraCoords, path);
     if length(posData) == 0
         @warn "No data was added to the stack."
         return
