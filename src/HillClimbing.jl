@@ -30,21 +30,21 @@ function getNewParams(params::PredictionParameters)
     params.speedExponentCC += 0.1
 
     params.odoGyroFactor += 0.1
-    push!(possibleParams, PredictionParameters(params))
+    if params.odoGyroFactor <= 1 push!(possibleParams, PredictionParameters(params)) end
     params.odoGyroFactor -= 0.2
-    push!(possibleParams, PredictionParameters(params))
+    if params.odoGyroFactor >= 0 push!(possibleParams, PredictionParameters(params)) end
     params.odoGyroFactor += 0.1
 
     params.odoMagFactor += 0.1
-    push!(possibleParams, PredictionParameters(params))
+    if params.odoMagFactor <= 1 push!(possibleParams, PredictionParameters(params)) end
     params.odoMagFactor -= 0.2
-    push!(possibleParams, PredictionParameters(params))
+    if params.odoMagFactor >= 0 push!(possibleParams, PredictionParameters(params)) end
     params.odoMagFactor += 0.1
 
     params.odoSteerFactor += 0.1
-    push!(possibleParams, PredictionParameters(params))
+    if params.odoSteerFactor <= 1 push!(possibleParams, PredictionParameters(params)) end
     params.odoSteerFactor -= 0.2
-    push!(possibleParams, PredictionParameters(params))
+    if params.odoSteerFactor >= 0 push!(possibleParams, PredictionParameters(params)) end
     params.odoSteerFactor += 0.1
 
     params.steerAngleFactor += 0.1
@@ -85,7 +85,7 @@ function getNewParams(params::PredictionParameters)
         params.measurementNoiseC += 0.1
         push!(possibleParams, PredictionParameters(params))
         params.measurementNoiseC -= 0.2
-        push!(possibleParams, PredictionParameters(params))
+        if params.measurementNoiseC >= 0.0 push!(possibleParams, PredictionParameters(params)) end
         params.measurementNoiseC += 0.1
     end
 
@@ -99,7 +99,7 @@ function getNewParams(params::PredictionParameters)
         params.measurementNoiseG += 0.1
         push!(possibleParams, PredictionParameters(params))
         params.measurementNoiseG -= 0.2
-        push!(possibleParams, PredictionParameters(params))
+        if params.measurementNoiseG >= 0.0 push!(possibleParams, PredictionParameters(params)) end
         params.measurementNoiseG += 0.1
     end
 

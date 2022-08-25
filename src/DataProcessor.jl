@@ -6,7 +6,8 @@ using LinearAlgebra
 export loadDataToStack
 """
 Loads a new JSOn File in RAM as Struct Array from PositionalData.
-C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/pos_data.json
+C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/big_loop_park_sunny_maxW.json
+C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/eight_park_spatial_memory.json
 
 # Arguments
 - `path::String`: The path to the .json file where the data is stored. 
@@ -45,11 +46,12 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
 
     while meanError > minError && i < maxIterations
         inner_i = 0
-        do 
+        while true 
             P = getNewParams(params)
             newMeanError = Inf64
 
             for p ∈ P
+                #@info "Current Params: $(p)."
                 e = calculateError(trainData, p)
 
                 # if new error is smaller take parameter
@@ -59,14 +61,19 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
                 end
             end
             inner_i += 1
-        while newMeanError > meanError && inner_i < maxIterChangeParams end
+
+            # Break out of loop
+            if newMeanError < meanError || inner_i == maxIterChangeParams 
+                meanError = newMeanError 
+                break 
+            end
+        end
 
         if inner_i == maxIterChangeParams
             @info "No better Value was found -> local minima!"
             return params
         end
 
-        meanError = newMeanError
         i += 1
     end
 
