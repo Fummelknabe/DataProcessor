@@ -26,7 +26,7 @@ export getLength
 getLength() = @info "Length of stack: " * string(length(trainData))
 
 export train
-function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100)
+function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100, saveAsFile::Bool=false)
     len = length(trainData)
     if len == 0
         @error "No data was added to the stack! Cannot train."
@@ -73,6 +73,9 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
         if inner_i == maxIterChangeParams
             println()
             @info "No better Value was found -> local minima with Parameters: $(params)"
+
+            if saveAsFile saveParamsJSon(params) end
+
             return params
         end
 
@@ -82,6 +85,9 @@ function train(maxIterations::Integer=1000, minError::Float64=1.0, maxIterChange
 
     println()
     @info "Training finished with mean error: $(newMeanError) and Parameters: $(params)"
+
+    if saveAsFile saveParamsJSon(params) end    
+
     return params
 end
 

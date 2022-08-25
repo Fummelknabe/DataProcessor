@@ -44,3 +44,9 @@ function loadFromJSon(rotateCameraCoords::Bool, path::String)
 
     return posData
 end
+
+function saveParamsJSon(params::PredictionParameters)
+    open("params/pred_params.json", "w") do ioStream
+        JSON.print(ioStream, params, 4)
+    end
+end
