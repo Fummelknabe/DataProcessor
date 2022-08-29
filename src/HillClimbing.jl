@@ -1,9 +1,16 @@
 
-function calculateError(trainData::Vector{typeof(StructArray(PositionalData[]))}, params::PredictionParameters)
+function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[]))}}, params::PredictionParameters)
     X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
 
     for d ∈ trainData
-        push!(X, predictFromRecordedData(d, params))
+        x = predictFromRecordedData(d[2], params)
+        push!(X, x)
+
+        # Check number of loops exceeds tolerable orientation change
+        tolerableOrientationChange = d[1] * 2*π + π
+        if abs(x.Ψ[1] - x.Ψ[end]) > tolerableOrientationChange 
+            return Inf64
+        end
     end
 
     accumulatedError = 0.0
@@ -20,43 +27,43 @@ function getNewParams(params::PredictionParameters)
     params.exponentCC += 0.1
     push!(possibleParams, PredictionParameters(params))
     params.exponentCC -= 0.2
-    push!(possibleParams, PredictionParameters(params))
+    if params.exponentCC >= 0.0 push!(possibleParams, PredictionParameters(params))
     params.exponentCC += 0.1
 
     params.speedExponentCC += 0.1
     push!(possibleParams, PredictionParameters(params))
     params.speedExponentCC -= 0.2
-    push!(possibleParams, PredictionParameters(params))
+    if params.speedExponentCC >= 0.0 push!(possibleParams, PredictionParameters(params))
     params.speedExponentCC += 0.1
 
     params.odoGyroFactor += 0.1
-    if params.odoGyroFactor <= 1 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoGyroFactor <= 1.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoGyroFactor -= 0.2
-    if params.odoGyroFactor >= 0 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoGyroFactor >= 0.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoGyroFactor += 0.1
 
     params.odoMagFactor += 0.1
-    if params.odoMagFactor <= 1 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoMagFactor <= 1.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoMagFactor -= 0.2
-    if params.odoMagFactor >= 0 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoMagFactor >= 0.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoMagFactor += 0.1
 
     params.odoSteerFactor += 0.1
-    if params.odoSteerFactor <= 1 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoSteerFactor <= 1.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoSteerFactor -= 0.2
-    if params.odoSteerFactor >= 0 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoSteerFactor >= 0.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoSteerFactor += 0.1
 
-    params.steerAngleFactor += 0.1
-    push!(possibleParams, PredictionParameters(params))
-    params.steerAngleFactor -= 0.2
-    push!(possibleParams, PredictionParameters(params))
-    params.steerAngleFactor += 0.1
+    params.steerAngleFactor += 0.02
+    if params.steerAngleFactor <= 0.25 push!(possibleParams, PredictionParameters(params))
+    params.steerAngleFactor -= 0.04
+    if params.steerAngleFactor >= 0.04 push!(possibleParams, PredictionParameters(params))
+    params.steerAngleFactor += 0.02
 
     params.σ_forSpeedKernel += 0.1
     push!(possibleParams, PredictionParameters(params))
     params.σ_forSpeedKernel -= 0.2
-    push!(possibleParams, PredictionParameters(params))
+    if params.σ_forSpeedKernel >= 0.015 push!(possibleParams, PredictionParameters(params))
     params.σ_forSpeedKernel += 0.1
 
     params.speedSinCC = !params.speedSinCC

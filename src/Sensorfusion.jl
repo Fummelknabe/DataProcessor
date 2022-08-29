@@ -195,6 +195,9 @@ This function predicts position from recorded data.
 
 # Arguments
 - `posData::StructVector{PositionalData}`: The recorded data points.
+
+# Returns
+- `predictedStates::StructVector{PositionalState[]}`: The estimated motion of the vehicle.
 """
 function predictFromRecordedData(posData::StructVector{PositionalData}, settings::PredictionParameters)
       # Set up predicted states and initialize first one

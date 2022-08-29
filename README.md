@@ -10,7 +10,7 @@ loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusi
 Load Positional Data to the stack with: 
 `loadDataToStack(path::String);`.
 This Data is used to calculate the parameters. To check the amount of data to train with: 
-`getLength()`
+`getLength()`.
 Initialize training with: `train()`.
 
 Tip: Use `;` to avoid prints to console when using in REPL.
