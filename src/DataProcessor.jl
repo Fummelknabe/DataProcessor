@@ -40,7 +40,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     @info "Start parameter: $(params)"
     
     # Error with starting parameters
-    meanError = calculateError(trainData[2], params)
+    meanError = calculateError(trainData, params)
     @info "Error of starting params: $(meanError)"
 
     i = 0
