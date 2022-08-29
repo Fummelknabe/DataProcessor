@@ -27,13 +27,13 @@ function getNewParams(params::PredictionParameters)
     params.exponentCC += 0.1
     push!(possibleParams, PredictionParameters(params))
     params.exponentCC -= 0.2
-    if params.exponentCC >= 0.0 push!(possibleParams, PredictionParameters(params))
+    if params.exponentCC >= 0.0 push!(possibleParams, PredictionParameters(params)) end
     params.exponentCC += 0.1
 
     params.speedExponentCC += 0.1
     push!(possibleParams, PredictionParameters(params))
     params.speedExponentCC -= 0.2
-    if params.speedExponentCC >= 0.0 push!(possibleParams, PredictionParameters(params))
+    if params.speedExponentCC >= 0.0 push!(possibleParams, PredictionParameters(params)) end
     params.speedExponentCC += 0.1
 
     params.odoGyroFactor += 0.1
@@ -55,15 +55,15 @@ function getNewParams(params::PredictionParameters)
     params.odoSteerFactor += 0.1
 
     params.steerAngleFactor += 0.02
-    if params.steerAngleFactor <= 0.25 push!(possibleParams, PredictionParameters(params))
+    if params.steerAngleFactor <= 0.25 push!(possibleParams, PredictionParameters(params)) end
     params.steerAngleFactor -= 0.04
-    if params.steerAngleFactor >= 0.04 push!(possibleParams, PredictionParameters(params))
+    if params.steerAngleFactor >= 0.04 push!(possibleParams, PredictionParameters(params)) end
     params.steerAngleFactor += 0.02
 
     params.σ_forSpeedKernel += 0.1
     push!(possibleParams, PredictionParameters(params))
     params.σ_forSpeedKernel -= 0.2
-    if params.σ_forSpeedKernel >= 0.015 push!(possibleParams, PredictionParameters(params))
+    if params.σ_forSpeedKernel >= 0.015 push!(possibleParams, PredictionParameters(params)) end
     params.σ_forSpeedKernel += 0.1
 
     params.speedSinCC = !params.speedSinCC
