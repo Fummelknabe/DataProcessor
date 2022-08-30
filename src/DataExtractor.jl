@@ -45,8 +45,32 @@ function loadFromJSon(rotateCameraCoords::Bool, path::String)
     return posData
 end
 
-function saveParamsJSon(params::PredictionParameters)
-    open("params/pred_params.json", "w") do ioStream
+function loadParamsFromJSon(filePath::String)
+    params = PredictionSettings(false, false, 5, false, 5, false, 0.075, 0.33, 0.66, 0, 0, 0, 0, 0, 1/3)
+    paramsDict = JSON.parsefile(filePath, dicttype=Dict, inttype=Int64)
+
+    params.exponentCC = paramsDict["exponentCC"]
+    params.speedExponentCC = paramsDict["speedExponentCC"]
+    params.kalmanFilterCamera = paramsDict["kalmanFilterCamera"]
+    params.kalmanFilterGyro = paramsDict["kalmanFilterGyro"]
+    params.measurementNoiseC = paramsDict["measurementNoiseC"]
+    params.measurementNoiseG = paramsDict["measurementNoiseG"]
+    params.processNoiseC = paramsDict["processNoiseC"]
+    params.processNoiseG = paramsDict["processNoiseG"]
+    params.odoGyroFactor = paramsDict["odoGyroFactor"]
+    params.odoMagFactor = paramsDict["odoMagFactor"]
+    params.odoSteerFactor = paramsDict["odoSteerFactor"]
+    params.steerAngleFactor = paramsDict["steerAngleFactor"]
+    params.speedSinCC = paramsDict["speedSinCC"]
+    params.useSinCC = paramsDict["useSinCC"]
+    params.σ_forSpeedKernel = paramsDict["σ_forSpeedKernel"]
+
+    return params
+end
+
+function saveParamsJSon(params::PredictionParameters; fileName::Union{String, Nothing}=nothing)
+    name = isnothing(fileName) ? "pred_params" : fileName
+    open("params/$(name).json", "w") do ioStream
         JSON.print(ioStream, params, 4)
     end
 end

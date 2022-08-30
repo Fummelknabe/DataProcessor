@@ -26,16 +26,40 @@ end
 export getLength
 getLength() = @info "Length of stack: " * string(length(trainData))
 
-export train
-function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100, saveAsFile::Bool=false)
-    len = length(trainData)
-    if len == 0
-        @error "No data was added to the stack! Cannot train."
-        return
+export addInitialParameter
+"""
+This method adds Parameters to a list used for random restart.
+
+# Arguments
+- `param::Union{String, PredictionParameters}`: The Parameters can be directly provided or the path to the JSON file containing the information.
+"""
+function addInitialParameter(param::Union{String, PredictionParameters})
+    if param isa String
+        push!(initialParameters, loadParamsFromJSon(param))
+    else
+        push!(initialParameters, param)
     end
+end
+
+
+export train
+"""
+This function executes the hillclimbing itself. The data to train with should be given in `trainData`. 
+
+# Optional Arguments
+- `maxIterations::Integer`: The maximum iterations after which the algorithm terminates.
+- `minError::Float64`: The minimum error to achieve if the maximum iterations were not exceded.
+- `maxIterChangeParams`: How many iterations should be looked for better parameters. If greater, greater deviation in parameters from initial parameter possible. 
+- `saveAsFile::Bool`: If resulting parameters should be saved as a JSON file.
+- `randomRestart::Bool`: Restart algorithm with initial parameters provided in `initialParameters`.
+"""
+function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100, saveAsFile::Bool=false, randomRestart::Bool=false, rri::Integer=1)
+    len = length(trainData)
+    len == 0 && throw(ArgumentError("No data was added to the stack! Cannot train."))
+    (randomRestart && length(initialParameters) == 0) && throw(ArgumentError("For random restart to work, initial parameters must be provided using `addInitialParameter`."))
 
     # Starting Parameters
-    params = PredictionParameters()
+    params = randomRestart ? initialParameters[rri] : PredictionParameters()
     @info "Training with $(len) data points..."
     @info "Start parameter: $(params)"
     
@@ -77,7 +101,8 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 
             if saveAsFile saveParamsJSon(params) end
 
-            return params
+            return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) 
+                                                                      : params
         end
 
         i += 1
@@ -89,7 +114,8 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 
     if saveAsFile saveParamsJSon(params) end    
 
-    return params
+    return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) 
+                                                              : params
 end
 
 include("Structs.jl")
@@ -97,5 +123,6 @@ include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")
 trainData = Vector{Tuple{Int64, typeof(StructArray(PositionalData[]))}}(undef, 0);
+initialParameters = Vector{PredictionParameters}(undef, 0);
 
 end # module
