@@ -39,7 +39,7 @@ function getNewParams(params::PredictionParameters)
     params.odoGyroFactor += 0.1
     if params.odoGyroFactor <= 1.0 push!(possibleParams, PredictionParameters(params)) end
     params.odoGyroFactor -= 0.2
-    if params.odoGyroFactor >= 0.0 push!(possibleParams, PredictionParameters(params)) end
+    if params.odoGyroFactor >= (params.ΨₒmagInfluence ? 0.01 : 0.0) push!(possibleParams, PredictionParameters(params)) end
     params.odoGyroFactor += 0.1
 
     params.odoMagFactor += 0.1
@@ -81,6 +81,10 @@ function getNewParams(params::PredictionParameters)
     params.kalmanFilterGyro = !params.kalmanFilterGyro
     push!(possibleParams, PredictionParameters(params))
     params.kalmanFilterGyro = !params.kalmanFilterGyro  
+
+    params.ΨₒmagInfluence = !params.ΨₒmagInfluence
+    push!(possibleParams, PredictionParameters(params))
+    params.ΨₒmagInfluence = !params.ΨₒmagInfluence
 
     if params.kalmanFilterCamera         
         params.processNoiseC += 0.1

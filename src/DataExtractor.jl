@@ -46,7 +46,7 @@ function loadFromJSon(rotateCameraCoords::Bool, path::String)
 end
 
 function loadParamsFromJSon(filePath::String)
-    params = PredictionSettings(false, false, 5, false, 5, false, 0.075, 0.33, 0.66, 0, 0, 0, 0, 0, 1/3)
+    params = PredictionParameters()
     paramsDict = JSON.parsefile(filePath, dicttype=Dict, inttype=Int64)
 
     params.exponentCC = paramsDict["exponentCC"]
@@ -64,6 +64,7 @@ function loadParamsFromJSon(filePath::String)
     params.speedSinCC = paramsDict["speedSinCC"]
     params.useSinCC = paramsDict["useSinCC"]
     params.σ_forSpeedKernel = paramsDict["σ_forSpeedKernel"]
+    params.ΨₒmagInfluence = paramsDict["ΨₒmagInfluence"]
 
     return params
 end

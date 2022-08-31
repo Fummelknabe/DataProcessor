@@ -45,9 +45,10 @@ mutable struct PredictionParameters
     processNoiseG::Float32
     measurementNoiseG::Float32
     σ_forSpeedKernel::Float32   
+    ΨₒmagInfluence::Bool
 
     # Beginning parameters (Maybe change with random restart)
-    PredictionParameters() = new(false, false, 5, false, 5, false, 0.075, 0.33, 0.66, 0.0, 0.1, 0.0, 0.1, 0.0, 1/3)
+    PredictionParameters() = new(false, false, 5, false, 5, false, 0.075, 0.33, 0.66, 0.0, 0.1, 0.0, 0.1, 0.0, 1/3, false)
 
     PredictionParameters(params::PredictionParameters) = new(
         params.kalmanFilterCamera,
@@ -64,6 +65,7 @@ mutable struct PredictionParameters
         params.measurementNoiseC,
         params.processNoiseG,
         params.measurementNoiseG,
-        params.σ_forSpeedKernel
+        params.σ_forSpeedKernel,
+        params.ΨₒmagInfluence
     )
 end

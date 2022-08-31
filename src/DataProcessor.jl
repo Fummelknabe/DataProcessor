@@ -4,6 +4,8 @@ using StructArrays
 using LinearAlgebra
 using ProgressMeter
 
+include("Structs.jl")
+
 export loadDataToStack
 """
 Loads a new JSOn File in RAM as Struct Array from PositionalData.
@@ -99,10 +101,9 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
             println()
             @info "No better Value was found -> local minima with Parameters: $(params)"
 
-            if saveAsFile saveParamsJSon(params) end
+            if saveAsFile saveParamsJSon(params, fileName=randomRestart ? "pred_params$(rri)" : nothing) end
 
-            return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) 
-                                                                      : params
+            return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) : params
         end
 
         i += 1
@@ -110,15 +111,13 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     end
 
     println()
-    @info "Training finished with mean error: $(newMeanError) and Parameters: $(params)"
+    @info "Training finished with mean error: $(meanError) and Parameters: $(params)"
 
-    if saveAsFile saveParamsJSon(params) end    
+    if saveAsFile saveParamsJSon(params, fileName=randomRestart ? "pred_params$(rri)" : nothing) end    
 
-    return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) 
-                                                              : params
+    return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) : params
 end
 
-include("Structs.jl")
 include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")
