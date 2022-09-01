@@ -90,7 +90,7 @@ function getNewParams(params::PredictionParameters)
         params.processNoiseC += 0.1
         push!(possibleParams, PredictionParameters(params))
         params.processNoiseC -= 0.2
-        push!(possibleParams, PredictionParameters(params))
+        if params.processNoiseC >= 0.0 push!(possibleParams, PredictionParameters(params))
         params.processNoiseC += 0.1
 
         params.measurementNoiseC += 0.1
@@ -104,7 +104,7 @@ function getNewParams(params::PredictionParameters)
         params.processNoiseG += 0.1
         push!(possibleParams, PredictionParameters(params))
         params.processNoiseG -= 0.2
-        push!(possibleParams, PredictionParameters(params))
+        if params.processNoiseG >= 0.0 push!(possibleParams, PredictionParameters(params))
         params.processNoiseG += 0.1
 
         params.measurementNoiseG += 0.1
