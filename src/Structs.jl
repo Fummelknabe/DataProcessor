@@ -68,4 +68,8 @@ mutable struct PredictionParameters
         params.σ_forSpeedKernel,
         params.ΨₒmagInfluence
     )
+
+    PredictionParameters(kalmanFilterCamera, kalmanFilterGyro, exponentCC, useSinCC, speedExponentCC, speedSinCC, steerAngleFactor, odoSteerFactor, odoGyroFactor, odoMagFactor, processNoiseC, measurementNoiseC, processNoiseG, measurementNoiseG, σ_forSpeedKernel, ΨₒmagInfluence) = new(
+        kalmanFilterCamera, kalmanFilterGyro, exponentCC, useSinCC, speedExponentCC, speedSinCC, steerAngleFactor, odoSteerFactor, odoGyroFactor, odoMagFactor, processNoiseC, measurementNoiseC, processNoiseG, measurementNoiseG, σ_forSpeedKernel, ΨₒmagInfluence
+    )
 end

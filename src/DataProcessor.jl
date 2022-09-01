@@ -3,6 +3,7 @@ module DataProcessor
 using StructArrays
 using LinearAlgebra
 using ProgressMeter
+using Random
 
 include("Structs.jl")
 
@@ -30,17 +31,39 @@ getLength() = @info "Length of stack: " * string(length(trainData))
 
 export addInitialParameter
 """
-This method adds Parameters to a list used for random restart.
+This method adds Parameters to a list used for random restart. If no argument is given the parameters will be randomly generated.
 
-# Arguments
+# Optional Argument
 - `param::Union{String, PredictionParameters}`: The Parameters can be directly provided or the path to the JSON file containing the information.
 """
-function addInitialParameter(param::Union{String, PredictionParameters})
+function addInitialParameter(;param::Union{String, PredictionParameters}=".")
     if param isa String
-        push!(initialParameters, loadParamsFromJSon(param))
+        if param != "."
+            push!(initialParameters, loadParamsFromJSon(param))
+            return
+        end
     else
         push!(initialParameters, param)
+        return
     end
+
+    # Add random parameter
+    push!(initialParameters, PredictionParameters(bitrand(1)[1], 
+                                                  bitrand(1)[1], 
+                                                  rand(Float32, 1)[1]*10, 
+                                                  bitrand(1)[1], 
+                                                  rand(Float32, 1)[1]*10, 
+                                                  bitrand(1)[1], 
+                                                  rand(Float32, 1)[1]*0.3, 
+                                                  rand(Float32, 1)[1], 
+                                                  rand(Float32, 1)[1]+0.01, 
+                                                  rand(Float32, 1)[1], 
+                                                  rand(Float32, 1)[1]*0.3+0.1, 
+                                                  rand(Float32, 1)[1]*100, 
+                                                  rand(Float32, 1)[1]*0.3+0.1, 
+                                                  rand(Float32, 1)[1]*100, 
+                                                  rand(Float32, 1)[1], 
+                                                  bitrand(1)[1]))
 end
 
 
