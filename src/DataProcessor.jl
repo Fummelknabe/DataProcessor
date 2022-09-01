@@ -122,7 +122,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 
         if inner_i == maxIterChangeParams
             println()
-            @info "No better Value was found -> local minima with Parameters: $(params)"
+            @info "No better Value was found -> local minima with Parameters: $(params) with error: $(meanError)"
 
             if saveAsFile saveParamsJSon(params, fileName=randomRestart ? "pred_params$(rri)" : nothing) end
 
