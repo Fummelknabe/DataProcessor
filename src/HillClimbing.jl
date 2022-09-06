@@ -1,5 +1,5 @@
 
-function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[]))}}, params::PredictionParameters)
+function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters)
     X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
 
     for d ∈ trainData
@@ -13,9 +13,17 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
         end
     end
 
+    
     accumulatedError = 0.0
-    for x ∈ X
-        accumulatedError += norm(x[1].position - x[length(x)].position)
+    for i ∈ 1:length(X)
+        # if no real position is provided compare start and end point 
+        if isnothing(trainData[i][3])
+            accumulatedError += norm(X[i][1].position - X[i][end].position)
+        else
+            # Compare with real position
+            # TODO
+            @warn "STILL WIP"
+        end
     end
 
     return accumulatedError / length(X)

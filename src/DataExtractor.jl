@@ -45,6 +45,25 @@ function loadFromJSon(rotateCameraCoords::Bool, path::String)
     return posData
 end
 
+function loadFromJSon(path::String)
+    posData = Matrix{Float32}(undef, 3, 0)
+    try
+        posDataDicts = JSON.parsefile(path, dicttype=Dict, inttype=Int64);
+
+        for dict in posDataDicts        
+            posData = hcat(posData, [dict["x"], dict["y"], dict["z"]]);
+        end
+    catch e
+        if e isa SystemError
+            @warn "The given file does not exist."
+        else
+            println(e)
+        end
+    end
+
+    return posData
+end
+
 function loadParamsFromJSon(filePath::String)
     params = PredictionParameters()
     paramsDict = JSON.parsefile(filePath, dicttype=Dict, inttype=Int64)

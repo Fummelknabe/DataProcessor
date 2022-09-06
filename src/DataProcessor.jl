@@ -14,16 +14,19 @@ Loads a new JSOn File in RAM as Struct Array from PositionalData.
 # Arguments
 - `path::String`: The path to the .json file where the data is stored. 
 - `numberOfLoops::Int`: The number of loops the robot made in this data set. 
+
+# Optional Arguments
 - `rotateCameraCoords::Bool`: Rotate the camera position so it fits onto prediction.
+- `pathPosTracking::String`: The path to the .json file containing the correct positional information for the data.
 """
-function loadDataToStack(path::String, numberOfLoops::Int; rotateCameraCoords::Bool=true)
+function loadDataToStack(path::String, numberOfLoops::Int; rotateCameraCoords::Bool=true, pathPosTracking::String="")
     posData = loadFromJSon(rotateCameraCoords, path);
     if length(posData) == 0
         @warn "No data was added to the stack."
         return
     end
 
-    push!(trainData, (numberOfLoops, posData));
+    push!(trainData, (numberOfLoops, posData, cmp(pathPosTracking, String("")) == 0 ? nothing : loadFromJSon(pathPosTracking)));
 end
 
 export getLength
@@ -144,7 +147,7 @@ end
 include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")
-trainData = Vector{Tuple{Int64, typeof(StructArray(PositionalData[]))}}(undef, 0);
+trainData = Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}(undef, 0);
 initialParameters = Vector{PredictionParameters}(undef, 0);
 
 end # module
