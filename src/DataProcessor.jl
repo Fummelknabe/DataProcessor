@@ -53,6 +53,7 @@ function addInitialParameter(;param::Union{String, PredictionParameters}=".")
     # Add random parameter
     push!(initialParameters, PredictionParameters(bitrand(1)[1], 
                                                   bitrand(1)[1], 
+                                                  bitrand(1)[1],
                                                   rand(Float32, 1)[1]*10, 
                                                   bitrand(1)[1], 
                                                   rand(Float32, 1)[1]*10, 
@@ -65,8 +66,12 @@ function addInitialParameter(;param::Union{String, PredictionParameters}=".")
                                                   rand(Float32, 1)[1]*100, 
                                                   rand(Float32, 1)[1]*0.3+0.1, 
                                                   rand(Float32, 1)[1]*100, 
+                                                  rand(Float32, 1)[1]*0.3+0.1, 
+                                                  rand(Float32, 1)[1]*100,
                                                   rand(Float32, 1)[1], 
-                                                  bitrand(1)[1]))
+                                                  bitrand(1)[1],
+                                                  bitrand(1)[1]+0.01,
+                                                  bitrand(1)[1]*0.01))
 end
 
 
@@ -80,8 +85,9 @@ This function executes the hillclimbing itself. The data to train with should be
 - `maxIterChangeParams`: How many iterations should be looked for better parameters. If greater, greater deviation in parameters from initial parameter possible. 
 - `saveAsFile::Bool`: If resulting parameters should be saved as a JSON file.
 - `randomRestart::Bool`: Restart algorithm with initial parameters provided in `initialParameters`.
+- `checkLoops::Bool`: If the number of loops should be checked upon estimation.
 """
-function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100, saveAsFile::Bool=false, randomRestart::Bool=false, rri::Integer=1)
+function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100, saveAsFile::Bool=false, randomRestart::Bool=false, rri::Integer=1, checkLoops::Bool=true)
     len = length(trainData)
     len == 0 && throw(ArgumentError("No data was added to the stack! Cannot train."))
     (randomRestart && length(initialParameters) == 0) && throw(ArgumentError("For random restart to work, initial parameters must be provided using `addInitialParameter`."))
@@ -92,7 +98,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     @info "Start parameter: $(params)"
     
     # Error with starting parameters
-    meanError = calculateError(trainData, params)
+    meanError = calculateError(trainData, params, checkLoops)
     @info "Error of starting params: $(meanError)"
 
     i = 0
@@ -106,7 +112,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 
             for p ∈ P
                 #@info "Current Params: $(p)."
-                e = calculateError(trainData, p)
+                e = calculateError(trainData, p, checkLoops)
 
                 # if new error is smaller take parameter
                 if e < newMeanError
@@ -125,7 +131,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 
         if inner_i == maxIterChangeParams
             println()
-            @info "No better Value was found -> local minima with Parameters: $(params) with error: $(meanError)"
+            @info "No better Value was found -> local minima with Parameters: $(params) with error: $(meanError) after $(i) iteration(s)"
 
             if saveAsFile saveParamsJSon(params, fileName=randomRestart ? "pred_params$(rri)" : nothing) end
 

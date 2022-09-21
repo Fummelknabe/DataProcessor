@@ -1,5 +1,5 @@
 
-function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters)
+function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters, checkLoops::Bool)
     X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
 
     for d ∈ trainData
@@ -7,9 +7,11 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
         push!(X, x)
 
         # Check number of loops exceeds tolerable orientation change
-        tolerableOrientationChange = d[1] * 2*π + π
-        if abs(x.Ψ[1] - x.Ψ[end]) > tolerableOrientationChange 
-            return Inf64
+        if checkLoops
+            tolerableOrientationChange = d[1] * 2*π + π
+            if abs(x.Ψ[1] - x.Ψ[end]) > tolerableOrientationChange 
+                return Inf64
+            end
         end
     end
 
@@ -63,9 +65,9 @@ function getNewParams(params::PredictionParameters)
     params.odoSteerFactor += 0.1
 
     params.steerAngleFactor += 0.02
-    if params.steerAngleFactor <= 0.25 push!(possibleParams, PredictionParameters(params)) end
+    if params.steerAngleFactor <= 10.0 push!(possibleParams, PredictionParameters(params)) end
     params.steerAngleFactor -= 0.04
-    if params.steerAngleFactor >= 0.04 push!(possibleParams, PredictionParameters(params)) end
+    if params.steerAngleFactor >= 0.0 push!(possibleParams, PredictionParameters(params)) end
     params.steerAngleFactor += 0.02
 
     params.σ_forSpeedKernel += 0.1
@@ -74,9 +76,9 @@ function getNewParams(params::PredictionParameters)
     if params.σ_forSpeedKernel >= 0.015 push!(possibleParams, PredictionParameters(params)) end
     params.σ_forSpeedKernel += 0.1
 
-    params.speedSinCC = !params.speedSinCC
+    params.speedUseSinCC = !params.speedUseSinCC
     push!(possibleParams, PredictionParameters(params))
-    params.speedSinCC = !params.speedSinCC
+    params.speedUseSinCC = !params.speedUseSinCC
 
     params.useSinCC = !params.useSinCC
     push!(possibleParams, PredictionParameters(params))
@@ -93,6 +95,10 @@ function getNewParams(params::PredictionParameters)
     params.ΨₒmagInfluence = !params.ΨₒmagInfluence
     push!(possibleParams, PredictionParameters(params))
     params.ΨₒmagInfluence = !params.ΨₒmagInfluence
+
+    params.UKF = !params.UKF
+    push!(possibleParams, PredictionParameters(params))
+    params.UKF = !params.UKF
 
     if params.kalmanFilterCamera         
         params.processNoiseC += 0.1
@@ -120,6 +126,32 @@ function getNewParams(params::PredictionParameters)
         params.measurementNoiseG -= 0.2
         if params.measurementNoiseG >= 0.0 push!(possibleParams, PredictionParameters(params)) end
         params.measurementNoiseG += 0.1
+    end
+
+    if params.UKF
+        params.processNoiseS += 0.1
+        if params.processNoiseS <= 1.0 push!(possibleParams, PredictionParameters(params)) end
+        params.processNoiseS -= 0.2
+        if params.processNoiseS >= 0.0 push!(possibleParams, PredictionParameters(params)) end
+        params.processNoiseS += 0.1
+
+        params.measurementNoiseS += 0.1
+        push!(possibleParams, PredictionParameters(params))
+        params.measurementNoiseS -= 0.2
+        if params.measurementNoiseS >= 0.01 push!(possibleParams, PredictionParameters(params)) end
+        params.measurementNoiseS += 0.1
+
+        params.κ += 0.1
+        push!(possibleParams, PredictionParameters(params))
+        params.κ -= 0.2
+        if params.κ >= 0.0 push!(possibleParams, PredictionParameters(params)) end
+        params.κ += 0.1
+
+        params.α += 0.001
+        push!(possibleParams, PredictionParameters(params))
+        params.α -= 0.002
+        if params.α >= 0.00001 push!(possibleParams, PredictionParameters(params)) end
+        params.α += 0.001
     end
 
     return possibleParams

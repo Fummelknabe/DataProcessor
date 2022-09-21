@@ -1,5 +1,5 @@
 using DSP
-
+using LinearAlgebra
 
 predictedStates = StructArray(PositionalState[])
 
@@ -21,8 +21,44 @@ const H_c = [1 0 0 0 0;
              0 1 0 0 0;
              0 0 1 0 0]
 
+const Hₛ = [1 0 0 0 0;
+           0 1 0 0 0;
+           0 0 1 0 0;
+           0 0 0 1 0;
+           0 0 0 0 1]
+
+const lᵥ = 0.18
+const lₕ = 0.50
+
+# Dimension of state for UKF
+const n = 5
+
+# Calculate angles using angular Velocity ω
+Ψ(oldΨ, δt, ω::Vector{Float32}) = oldΨ - δt*ω[3]
+θ_ang(oldθ, δt, ω::Vector{Float32}) = oldθ + δt*ω[2]
+ϕ_ang(oldϕ, δt, ω::Vector{Float32}) = oldϕ + δt*ω[1]
+
+# Calculate angles using steering angle δ and acceleration
+Ψ(oldΨ, δt, δ::Float32, β::Float32, v::Float32) = Float32(oldΨ + δt*(v/(lₕ+lᵥ)*cos(β)*tan(δ)))
+θ_acc(oldθ, δt, ω::Vector{Float32}, a::Vector{Float32}) = oldθ + sign(ω[2])*δt*Float32(π/2 - acos(a[1]/norm(a)))
+ϕ_acc(oldϕ, δt, ω::Vector{Float32}, a::Vector{Float32}) = oldϕ + sign(ω[3])*δt*Float32(π/2 - acos(a[2]/norm(a)))
+β(δ) = Float32(atan(lₕ/(lᵥ+lₕ)*tan(δ)))
+
 P(F, Q, oldP, size) = F*oldP*transpose(F) .+ Q*Matrix(I, size, size)
 K(P, H, R, size) = P*transpose(H)*(H*P*transpose(H) .+ R*Matrix(I, size, size))^-1
+
+function changeInPosition(a::Vector{Float32}, v::Float32, Ψ::Float32, θ::Float32, δt::Float32; β::Float32=Float32(0.0))
+      # Get Change in Position
+      ẋ = v * cos(Ψ + β)
+      ẏ = v * sin(Ψ + β)
+
+      # Only when a significant deviation from z-Axis = 1g
+      ż = (abs(a[3] - 1) > 0.02) ? v * sin(θ) : 0
+
+      return [ẋ*δt, ẏ*δt, ż*δt]
+end
+
+include("UKF.jl")
 
 """
 This function transforms camera coords ontop of the prediction. This should be 
@@ -68,8 +104,34 @@ function transformCoords(pos::Vector{T}, up::Vector{T}, angularSpeed::Vector{T},
     return (Rx*Ry)*pos
 end
 
-function computeSpeed(cameraChange::Vector{Float32}, δt::Vector{Float32}, v::Float32, ratedCamConfidence::Float32, σ::Float32)
+"""
+This function computes the speed from measured speed and camera position.
+"""
+function computeSpeed(cameraMatrix::Matrix{Float32}, δt::Vector{Float32}, v::Float32, ratedCamConfidence::Float32, σ::Float32, command::String, pastBackwards::Bool, δ::Float32)
+      cameraChange = cameraMatrix[:, 4]
       length(cameraChange) == length(δt) || throw("Computing Speed failed, as $(cameraChange) and $(δt) were not the same length.")
+      sign = pastBackwards ? -1 : 1
+
+      # Wheel slippage
+      ws = false
+
+      if length(cameraChange) > 2 && ratedCamConfidence > 0.6
+            # get direction of robot from camera
+            posChange = cameraMatrix[end, 1:2] - cameraMatrix[end-1, 1:2]
+            prevPosChange = cameraMatrix[end-1, 1:2] - cameraMatrix[end-2, 1:2]
+            α = acos(round(dot(posChange, prevPosChange) / (norm(posChange) * norm(prevPosChange)); digits=4))
+            if α > 3/4*π  sign *= -1 end
+
+            # check wheel slippage
+            ws = α < π/2 && 2*α > δ
+      else
+            # get direction of robot from command
+            if occursin("backward", command)
+                  sign = -1
+            elseif occursin("forward", command)
+                  sign = 1
+            end            
+      end
       
       # Filter speed from camera change
       l = length(cameraChange)
@@ -78,26 +140,18 @@ function computeSpeed(cameraChange::Vector{Float32}, δt::Vector{Float32}, v::Fl
       cameraSpeed = conv(cameraChange ./ δt, kernel)
       
       # Combine with wheel odometry speed value
-      return Float32((1-ratedCamConfidence) * v + ratedCamConfidence * cameraSpeed[l])
+      return sign*(ws ? Float32(cameraSpeed[l]) : (Float32((1-ratedCamConfidence) * v + ratedCamConfidence * cameraSpeed[l]))), ws
 end
 
-# Calculate angles using angular Velocity ω
-Ψ(oldΨ, δt, ω::Vector{Float32}) = oldΨ - δt*ω[3]
-θ_ang(oldθ, δt, ω::Vector{Float32}) = oldθ - δt*ω[2]
+function extractTaitbryanFromOrientation(state::PositionalState, dataPoints::StructVector{PositionalData})
+      cameraOrientation = (dataPoints[end].cameraOri, dataPoints[end-1].cameraOri)
 
-# Calculate angles using steering angle δ and acceleration
-Ψ(oldΨ, δt, δ::Float32) = oldΨ + δt*δ
-θ_acc(oldθ, δt, a::Vector{Float32}) = oldθ + δt*acos(a[3]/norm(a))
+      δt = dataPoints[end].deltaTime
+      Ψᵥₒ = state.Ψ + δt*(cameraOrientation[1][2] - cameraOrientation[2][2])
+      θᵥₒ = state.θ + δt*(cameraOrientation[1][1] - cameraOrientation[2][1])
+      ϕᵥₒ = state.ϕ + δt*(cameraOrientation[1][3] - cameraOrientation[2][3])
 
-function changeInPosition(a::Vector{Float32}, v::Float32, Ψ::Float32, θ::Float32, δt::Float32)
-      # Get Change in Position
-      x_dot = v * cos(Ψ)
-      y_dot = v * sin(Ψ)
-
-      # Only when a significant deviation from z-Axis = 1g
-      z_dot = (abs(a[3] - 1) > 0.02) ? v * sin(θ) : 0
-
-      return [x_dot*δt, y_dot*δt, z_dot*δt]
+      return Ψᵥₒ, θᵥₒ, ϕᵥₒ
 end
 
 """
@@ -106,70 +160,103 @@ This function predicts the next position from given datapoints and the last posi
 # Arguments
 - `posState::PositionalState`: The last positional state. 
 - `dataPoints::StructVector{PositionalData}`: An array of datapoints. There should atleast 2 data points to more accurately predict position. 
-- `params::PredictionParameters`: The parameters to influence quality of estimation.
 
 # Returns
 - `PositionalState`: The new positional state of the robot.
 """
-function predict(posState::PositionalState, dataPoints::StructVector{PositionalData}, params::PredictionParameters)
+function predict(posState::PositionalState, dataPoints::StructVector{PositionalData}, settings::PredictionParameters)
       # Get data from data point
       amountDataPoints = length(dataPoints)
       amountDataPoints > 1 || throw("More than $(amountDataPoints) Data Points need to be given to predict position.")
       newData = dataPoints[amountDataPoints]
 
       camPosMatrix = reduce(vcat, transpose.(dataPoints.cameraPos))   
-      v = computeSpeed(camPosMatrix[:, 4], dataPoints.deltaTime, newData.sensorSpeed, rateCameraConfidence(newData.cameraConfidence, params.speedExponentCC, params.speedSinCC), params.σ_forSpeedKernel)
-      
+      v, ws = computeSpeed(camPosMatrix, dataPoints.deltaTime, newData.sensorSpeed, rateCameraConfidence(newData.cameraConfidence, settings.speedExponentCC, settings.speedUseSinCC), settings.σ_forSpeedKernel, newData.command, posState.v < 0, Float32(newData.steerAngle*π/180))
+
       # Apply Kalman Filter to angular velocity data if wanted
       P_g_update = Matrix(I, 2, 2)
-      if params.kalmanFilterGyro
-            P_predict = P(F_g(newData.deltaTime), params.processNoiseG, posState.P_g, 2)
-            kalmanGain = K(P_predict, H_g, params.measurementNoiseG, 1)
+      if settings.kalmanFilterGyro
+            P_predict = P(F_g(newData.deltaTime), settings.processNoiseG, posState.P_g, 2)
+            kalmanGain = K(P_predict, H_g, settings.measurementNoiseG, 1)
             P_g_update = P_predict .- kalmanGain*H_g*P_predict
-            Ψ_ang = posState.Ψ + kalmanGain[2,1] * (params.steerAngleFactor*(newData.steerAngle-120) - newData.imuGyro[3])
+            current_δ = settings.steerAngleFactor*(newData.steerAngle*π/180)            
+            Ψ_ang = posState.Ψ + kalmanGain[2,1] * (newData.deltaTime*(v/(lₕ+lᵥ)*cos(β(current_δ))*tan(current_δ)) - newData.imuGyro[3])
       end
 
       # Calculate delta position with different information
-      δOdoSteeringAngle = changeInPosition(newData.imuAcc, 
-                                           v, 
-                                           Ψ(posState.Ψ, newData.deltaTime, Float32(params.steerAngleFactor*(newData.steerAngle-120))),
-                                           θ_acc(posState.θ, newData.deltaTime, newData.imuAcc),
-                                           newData.deltaTime)
+      if !settings.UKF
+            δOdoSteeringAngle = changeInPosition(newData.imuAcc, 
+                                                v, 
+                                                Ψ(posState.Ψ, newData.deltaTime, Float32(settings.steerAngleFactor*(newData.steerAngle*π/180)), β(newData.steerAngle*π/180), v),
+                                                θ_acc(posState.θ, newData.deltaTime, newData.imuGyro, newData.imuAcc),
+                                                newData.deltaTime,
+                                                β=Float32(newData.steerAngle*π/180))
+      else
+            wₘ = computeWeights(true, settings)
+            wₖ = computeWeights(false, settings)
+            μₜ, Χₜ, Σₜ = UKF_prediction(Float32.([posState.position[1], posState.position[2], posState.position[3], posState.Ψ, posState.θ]),
+                                    wₘ,
+                                    wₖ,
+                                    posState.Χ,
+                                    Float32.([newData.imuGyro[1], newData.imuGyro[2], newData.imuGyro[3], v, newData.deltaTime, newData.steerAngle]),
+                                    posState.Σ,
+                                    settings)
+                  
+            try 
+                  μₜ, Σₜ = UKF_update(μₜ, wₘ, wₖ, Χₜ, Σₜ, settings, [newData.cameraPos[1], newData.cameraPos[2], newData.cameraPos[3], convertMagToCompass(newData.imuMag), θ_acc(posState.θ, newData.deltaTime, newData.imuGyro, newData.imuAcc)])
+            catch e
+                  @error "Error occured!"
+                  println(e)
+                  println("Parameters: $(settings)")
+            end
+            
+            δOdoSteeringAngle = μₜ[1:3] - posState.position
+
+            # Update state
+            posState.Σ = Σₜ
+            posState.Χ = Χₜ
+      end
 
       δOdoAngularVelocity = changeInPosition(newData.imuAcc, 
                                              v, 
-                                             params.kalmanFilterGyro ? Float32(Ψ_ang) : Ψ(posState.Ψ, newData.deltaTime, newData.imuGyro),
+                                             settings.kalmanFilterGyro ? Float32(Ψ_ang) : Ψ(posState.Ψ, newData.deltaTime, newData.imuGyro),
                                              θ_ang(posState.θ, newData.deltaTime, newData.imuGyro),
                                              newData.deltaTime)
 
       δOdoCompassCourse = changeInPosition(newData.imuAcc,
                                            v,
-                                           convertMagToCompass(newData.imuMag),
+                                           convertMagToCompass(newData.imuMag, accelerometerVector=newData.imuAcc),
                                            θ_ang(posState.θ, newData.deltaTime, newData.imuGyro),
                                            newData.deltaTime)
 
       δCamPos = dataPoints[amountDataPoints].cameraPos[1:3] - dataPoints[amountDataPoints - 1].cameraPos[1:3]
 
-      ratedCC = rateCameraConfidence(newData.cameraConfidence, params.exponentCC, params.useSinCC)
-      δodometryPos = (params.odoGyroFactor.*δOdoAngularVelocity .+ params.odoSteerFactor.*δOdoSteeringAngle .+ params.odoMagFactor.*δOdoCompassCourse) ./ (params.odoGyroFactor + params.odoMagFactor + params.odoSteerFactor)
+      ratedCC = rateCameraConfidence(newData.cameraConfidence, settings.exponentCC, settings.useSinCC)
+      δodometryPos = (settings.odoGyroFactor.*δOdoAngularVelocity .+ settings.odoSteerFactor.*δOdoSteeringAngle .+ settings.odoMagFactor.*δOdoCompassCourse) ./ (settings.odoGyroFactor + settings.odoMagFactor + settings.odoSteerFactor)
 
-      newPosition = posState.position + (1-ratedCC)*δodometryPos + ratedCC*δCamPos
+      newPosition = posState.position + ((ws) ? δCamPos : (1-ratedCC)*δodometryPos + ratedCC*δCamPos)
       P_c_update = Matrix(I, 5, 5)
-      if params.kalmanFilterCamera
-            P_predict = P(F_c(posState, dataPoints[amountDataPoints]), params.processNoiseC, posState.P_c, 5)
-            kalmanGain = K(P_predict, H_c, params.measurementNoiseC, 3)
+      if settings.kalmanFilterCamera
+            P_predict = P(F_c(posState, dataPoints[amountDataPoints]), settings.processNoiseC, posState.P_c, 5)
+            kalmanGain = K(P_predict, H_c, settings.measurementNoiseC, 3)
             P_c_update = P_predict .- kalmanGain*H_c*P_predict
             newPosition = posState.position + δodometryPos + kalmanGain[1:3, 1:3] * (dataPoints[amountDataPoints].cameraPos[1:3] - (posState.position + δodometryPos))
       end
 
-      Ψₒ = (params.odoSteerFactor*Ψ(posState.Ψ, newData.deltaTime, Float32(params.steerAngleFactor*(newData.steerAngle-120)))+params.odoGyroFactor*(params.kalmanFilterGyro ? Float32(Ψ_ang) : Ψ(posState.Ψ, newData.deltaTime, newData.imuGyro))+(params.ΨₒmagInfluence ? params.odoMagFactor*convertMagToCompass(newData.imuMag) : 0)) / (params.odoGyroFactor + (params.ΨₒmagInfluence ? params.odoMagFactor : 0) + params.odoSteerFactor)
+      Ψᵥₒ, θᵥₒ, ϕᵥₒ = extractTaitbryanFromOrientation(posState, dataPoints)
+      Ψₒ = (settings.odoSteerFactor*Ψ(posState.Ψ, newData.deltaTime, Float32(settings.steerAngleFactor*(newData.steerAngle*π/180)), β(newData.steerAngle*π/180), v)+settings.odoGyroFactor*(settings.kalmanFilterGyro ? Float32(Ψ_ang) : Ψ(posState.Ψ, newData.deltaTime, newData.imuGyro))+(settings.ΨₒmagInfluence ? settings.odoMagFactor*convertMagToCompass(newData.imuMag) : 0)) / (settings.odoGyroFactor + (settings.ΨₒmagInfluence ? settings.odoMagFactor : 0) + settings.odoSteerFactor)
+      θ₀ = (settings.odoSteerFactor*θ_acc(posState.θ, newData.deltaTime, newData.imuGyro, newData.imuAcc)+settings.odoGyroFactor*θ_ang(posState.θ, newData.deltaTime, newData.imuGyro)+settings.odoMagFactor*θ_ang(posState.θ, newData.deltaTime, newData.imuGyro)) / (settings.odoGyroFactor + settings.odoMagFactor + settings.odoSteerFactor)
+      ϕ₀ = (settings.odoSteerFactor*ϕ_acc(posState.ϕ, newData.deltaTime, newData.imuGyro, newData.imuAcc)+settings.odoGyroFactor*ϕ_ang(posState.ϕ, newData.deltaTime, newData.imuGyro)) / (settings.odoGyroFactor + settings.odoSteerFactor)
 
       return PositionalState(newPosition,
                              v,
+                             (ws) ? Ψᵥₒ : (1-ratedCC)*Ψₒ + ratedCC*Ψᵥₒ, 
+                             (ws) ? θᵥₒ : (1-ratedCC)*θ₀ + ratedCC*θᵥₒ,
+                             (ws) ? ϕᵥₒ : (1-ratedCC)*ϕ₀ + ratedCC*ϕᵥₒ,
                              P_c_update,
                              P_g_update,
-                             Ψₒ, 
-                             (params.odoSteerFactor*θ_acc(posState.θ, newData.deltaTime, newData.imuAcc)+params.odoGyroFactor*θ_ang(posState.θ, newData.deltaTime, newData.imuGyro)+params.odoMagFactor*θ_ang(posState.θ, newData.deltaTime, newData.imuGyro)) / (params.odoGyroFactor + params.odoMagFactor + params.odoSteerFactor)
+                             posState.Σ,
+                             posState.Χ
                         )
 end
 
@@ -188,9 +275,10 @@ function convertMagToCompass(magnetometerVector::Vector{Float32}; accelerometerV
             downVector = [accelerometerVector[1], -accelerometerVector[2], accelerometerVector[3]]
             northVector = magnetometerVector - (downVector * (dot(magnetometerVector, downVector) / dot(downVector, downVector)))
       end
-      angle = atan(northVector[1], northVector[2])
 
-      return Float32(abs((angle > 0) ? angle : angle + 2*π) - 2*π)
+      angle = ((northVector[2] > 0) ? π/2 : 3*π/2) - atan(northVector[1], northVector[2])
+
+      return Float32(abs((angle > 0) ? angle : angle + 2*π))
 end
 
 """
@@ -198,21 +286,46 @@ This function predicts position from recorded data.
 
 # Arguments
 - `posData::StructVector{PositionalData}`: The recorded data points.
+- `settings::PredictionSettings`: The parameters to influence prediction quality.
 """
-function predictFromRecordedData(posData::StructVector{PositionalData}, params::PredictionParameters)
+function predictFromRecordedData(posData::StructVector{PositionalData}, settings::PredictionParameters)
       # Set up predicted states and initialize first one
-      predictedStates = StructArray(PositionalState[])
-      push!(predictedStates, PositionalState(posData[1].cameraPos[1:3], posData[1].sensorSpeed, Matrix(I, 5, 5), Matrix(I, 2, 2), convertMagToCompass(posData[1].imuMag), θ_acc(0.0, 1.0, posData[1].imuAcc)))
-
+      estimatedStates = StructArray(PositionalState[])
+      Ψᵢₙᵢₜ = convertMagToCompass(posData[1].imuMag)
+      θᵢₙᵢₜ = θ_acc(0.0, posData[1].deltaTime, posData[1].imuGyro, posData[1].imuAcc)
+      ϕᵢₙᵢₜ = ϕ_acc(0.0, posData[1].deltaTime, posData[1].imuGyro, posData[1].imuAcc)
+      Σᵢₙᵢₜ = Float32.(Matrix(I, n, n))
+      Χᵢₙᵢₜ = settings.UKF ? generateSigmaPoints(Float32.([posData[1].cameraPos[1], posData[1].cameraPos[2], posData[1].cameraPos[3], Ψᵢₙᵢₜ, θᵢₙᵢₜ]), Σᵢₙᵢₜ, settings) : Vector{Vector{Float32}}(undef, 0)
+      push!(estimatedStates, PositionalState(posData[1].cameraPos[1:3], posData[1].sensorSpeed, Ψᵢₙᵢₜ, θᵢₙᵢₜ, ϕᵢₙᵢₜ, Matrix(I, 5, 5), Matrix(I, 2, 2), Σᵢₙᵢₜ, Χᵢₙᵢₜ))
       # Predict for every coming positional value
       for i in 2:length(posData)
-            push!(predictedStates, predict(
-                  predictedStates[i-1],
+            push!(estimatedStates, predict(
+                  estimatedStates[i-1],
                   # give mutiple positional data points if possible
                   (i > 9) ? posData[(i-9):i] : posData[(i-1):i],
-                  params
+                  settings
             ))
       end
 
-      return predictedStates
+      return estimatedStates
+end
+
+"""
+Start sensor fusion with a continuous flow of data.
+
+# Arguments
+- `posData::StructVector{PositionalData}`: The last recorded data points. Length should be more than 2.
+"""
+function initializeSensorFusion(posData::StructVector{PositionalData}, settings::PredictionParameters)
+      if length(predictedStates) == 0
+            # Set first state
+            Ψᵢₙᵢₜ = convertMagToCompass(posData[1].imuMag)
+            θᵢₙᵢₜ = θ_acc(0.0, posData[1].deltaTime, posData[1].imuGyro, posData[1].imuAcc)
+            ϕᵢₙᵢₜ = ϕ_acc(0.0, posData[1].deltaTime, posData[1].imuGyro, posData[1].imuAcc)
+            Σᵢₙᵢₜ = Float32.(Matrix(I, n, n))
+            Χᵢₙᵢₜ = settings.UKF ? generateSigmaPoints(Float32.([posData[1].cameraPos[1], posData[1].cameraPos[2], posData[1].cameraPos[3], Ψᵢₙᵢₜ, θᵢₙᵢₜ]), Σᵢₙᵢₜ, settings) : Vector{Vector{Float32}}(undef, 0)
+            global predictedStates[1] = PositionalState(posData[1].cameraPos[1:3], posData[1].sensorSpeed, Ψᵢₙᵢₜ, θᵢₙᵢₜ, ϕᵢₙᵢₜ, Matrix(I, 5, 5), Matrix(I, 2, 2), Σᵢₙᵢₜ, Χᵢₙᵢₜ)
+      end
+
+      push!(predictedStates, predict(predictedStates[length(predictedStates)  - 1], posData, settings))
 end

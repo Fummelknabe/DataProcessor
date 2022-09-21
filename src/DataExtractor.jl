@@ -5,7 +5,7 @@ firstMagValue = -1
 function convertDictToPosData(dict::Dict, rotateCameraCoords::Bool)
     posData = PositionalData()
         
-    posData.steerAngle = dict["steerAngle"]
+    posData.steerAngle = dict["steerAngle"] - 120
     posData.sensorAngle = dict["sensorAngle"]
     posData.maxSpeed = dict["maxSpeed"]
     posData.sensorSpeed = dict["sensorSpeed"]
@@ -22,6 +22,7 @@ function convertDictToPosData(dict::Dict, rotateCameraCoords::Bool)
     posData.imuAcc = dict["imuAcc"]    
     posData.deltaTime = dict["deltaTime"]
     posData.cameraConfidence = dict["cameraConfidence"] ./ 100
+    posData.command = dict["command"]
 
     return posData
 end
@@ -72,18 +73,23 @@ function loadParamsFromJSon(filePath::String)
     params.speedExponentCC = paramsDict["speedExponentCC"]
     params.kalmanFilterCamera = paramsDict["kalmanFilterCamera"]
     params.kalmanFilterGyro = paramsDict["kalmanFilterGyro"]
+    params.UKF = paramsDict["UKF"]
     params.measurementNoiseC = paramsDict["measurementNoiseC"]
     params.measurementNoiseG = paramsDict["measurementNoiseG"]
+    params.measurementNoiseS = paramsDict["measurementNoiseS"]
     params.processNoiseC = paramsDict["processNoiseC"]
     params.processNoiseG = paramsDict["processNoiseG"]
+    params.processNoiseS = paramsDict["processNoiseS"]
     params.odoGyroFactor = paramsDict["odoGyroFactor"]
     params.odoMagFactor = paramsDict["odoMagFactor"]
     params.odoSteerFactor = paramsDict["odoSteerFactor"]
     params.steerAngleFactor = paramsDict["steerAngleFactor"]
-    params.speedSinCC = paramsDict["speedSinCC"]
+    params.speedUseSinCC = paramsDict["speedUseSinCC"]
     params.useSinCC = paramsDict["useSinCC"]
     params.σ_forSpeedKernel = paramsDict["σ_forSpeedKernel"]
     params.ΨₒmagInfluence = paramsDict["ΨₒmagInfluence"]
+    params.κ = paramsDict["κ"]
+    params.α = paramsDict["α"]
 
     return params
 end
