@@ -144,6 +144,54 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) : params
 end
 
+
+#helper function
+function transformVecToString(v::Vector{T}) where T <: Number
+    s = String("")
+    for n ∈ v s = s*string(n)*" " end
+    return s
+end
+export saveDataToFile
+function saveDataToFile(data::Union{StructArray, Matrix}, filename::String)
+    if data isa Matrix
+        @info "Save positional [x, y, z] data in file."
+
+        open(filename*".data", "w") do io 
+            println(size(data)[2])
+            for i ∈ 1:size(data)[2]
+                write(io, string(data[1, i])*" "*string(data[2, i])*" "*string(data[3, i])*"\n");
+            end
+        end;
+    elseif data isa StructArray
+        @info "Save sensor data from struct in file."
+
+        open(filename*".data", "w") do io             
+            for i ∈ 1:length(data)
+                s = String("")
+
+                newData = data[i]
+
+                s = s*string(newData.steerAngle)*" "
+                s = s*string(newData.sensorAngle)*" "
+                s = s*string(newData.maxSpeed)*" "
+                s = s*string(newData.sensorSpeed)*" "
+                s = s*transformVecToString(newData.cameraPos)
+                s = s*transformVecToString(newData.cameraOri)
+                s = s*transformVecToString(newData.imuGyro)
+                s = s*transformVecToString(newData.imuAcc)
+                s = s*transformVecToString(newData.imuMag)
+                s = s*string(newData.deltaTime)*" "
+                s = s*string(newData.cameraConfidence)
+
+                write(io, s*"\n");
+            end
+        end;
+    else
+        @warn "Data given is not supported!"
+        return
+    end    
+end
+
 include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")

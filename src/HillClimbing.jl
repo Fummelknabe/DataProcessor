@@ -22,7 +22,7 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
         else
             # Compare with real position
             # TODO
-            @warn "STILL WIP"
+            @warn "Comparing with real position is still WIP"
         end
     end
 
