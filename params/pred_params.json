@@ -1,7 +1,7 @@
 {
     "kalmanFilterCamera": true,
     "kalmanFilterGyro": false,
-    "UKF": false,
+    "UKF": true,
     "exponentCC": 25.000061,
     "useSinCC": false,
     "speedExponentCC": 5.0,
