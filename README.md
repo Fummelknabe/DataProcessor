@@ -15,4 +15,8 @@ This Data is used to calculate the parameters. To check the amount of data to tr
 Initialize training with: `train()`.
 If you want to save the resulting parameters to JSON then: `train(saveAsFile=true)`.
 
+You can use the random restart option by calling `train(randomRestart=true)`. For this to work starting parameters 
+must be added before training. To do this call the function `addInitialParameter()`. This will add complete random parameters. For adding specific parameters you can give either a path as string to a json file 
+`train(param="somefile.json")` or just the datatype `PredictionParameters` itself.  
+
 Tip: Use `;` to avoid prints to console when using in REPL.
