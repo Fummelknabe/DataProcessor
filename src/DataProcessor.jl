@@ -172,11 +172,18 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String)
         @info "Save sensor data from struct in file."
 
         open(filename*".data", "w") do io             
-            for i ∈ 1:length(data)
+            for i ∈ 0:length(data)
+                if i == 0
+                    s = String("i steerAngle sensorAngle maxSpeed sensorSpeed cameraPosX cameraPosY cameraPosZ cameraOriX cameraOriY cameraOriZ cameraOriW imuGyroX imuGyroY imuGyroZ imuAccX imuAccY imuAccZ imuMagX imuMagY imuMagZ deltaTime cameraConfidence")
+                    write(io, s*"\n");
+                    continue
+                end
+
                 s = String("")
 
                 newData = data[i]
 
+                s = s*string(i)*" "
                 s = s*string(newData.steerAngle)*" "
                 s = s*string(newData.sensorAngle)*" "
                 s = s*string(newData.maxSpeed)*" "
