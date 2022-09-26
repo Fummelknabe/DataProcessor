@@ -139,9 +139,9 @@ function computeSpeed(cameraMatrix::Matrix{Float32}, δt::Vector{Float32}, v::Fl
             ws = α < π/2 && 2*α > δ
       else
             # get direction of robot from command
-            if occursin("backward", command)
+            if occursin("backward", command) & abs(v) < 0.3
                   sign = -1
-            elseif occursin("forward", command)
+            elseif occursin("forward", command) && abs(v) < 0.3
                   sign = 1
             end            
       end
@@ -184,7 +184,7 @@ function predict(posState::PositionalState, dataPoints::StructVector{PositionalD
       newData = dataPoints[amountDataPoints]
 
       camPosMatrix = reduce(vcat, transpose.(dataPoints.cameraPos))   
-      v, ws = computeSpeed(camPosMatrix, dataPoints.deltaTime, newData.sensorSpeed, rateCameraConfidence(newData.cameraConfidence, settings.speedExponentCC, settings.speedUseSinCC), settings.σ_forSpeedKernel, newData.command, posState.v < 0, Float32(newData.steerAngle*π/180))
+      v, ws = computeSpeed(camPosMatrix, dataPoints.deltaTime, newData.sensorSpeed, rateCameraConfidence(newData.cameraConfidence, settings.speedExponentCC, settings.speedUseSinCC), settings.σ_forSpeedKernel, newData.command, posState.v < 0 || (!(posState.v === 0) && posState.v == 0), Float32(newData.steerAngle*π/180))
 
       # Apply Kalman Filter to angular velocity data if wanted
       P_g_update = Matrix(I, 2, 2)
