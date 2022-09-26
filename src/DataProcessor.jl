@@ -152,18 +152,29 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 end
 
 export calculateAverageSpeed
-function calculateAverageSpeed(;data::Union{Nothing, typeof(StructArray(PositionalData[]))}=nothing)
-    f(d::typeof(StructArray(PositionalData[]))) = mean(d.sensorSpeed)
+function calculateAverageSpeed(;data::Union{Nothing, typeof(StructArray(PositionalData[]))}=nothing, leaveZeros::Bool=false)
+    # Removing trailing and leading zero speed values from data
+    function f(V::Vector{Float32})
+        vₒ = Vector{Float32}(undef, 0)
+        firstNonZero = false
+        for i ∈ 1:length(V)
+            if V[i] != 0.0 || (!(V[i:end] == zeros(Float32, length(V[i:end]))) && firstNonZero)
+                firstNonZero = true
+                push!(vₒ, V[i])
+            end
+        end
+        return vₒ
+    end
 
     if isnothing(data) 
-        if length(trainData) == 0 @warn "Stack is empty!" else @info "Use data stored in stack." end
+        if length(trainData) == 0 @warn "Stack is empty!" else @info "Using data stored in stack." end
 
         for d ∈ trainData
-            m = f(d[2])
+            m = mean(leaveZeros ? d[2].sensorSpeed : f(d[2].sensorSpeed))
             println("Average Speed in data set: $(m)")
         end
     else
-        m = f(data)
+        m = mean(leaveZeros ? data.sensorSpeed : f(data.sensorSpeed))
         println("Average Speed in data set: $(m)")
     end
 end
