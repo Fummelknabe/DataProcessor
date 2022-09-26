@@ -4,6 +4,7 @@ using StructArrays
 using LinearAlgebra
 using ProgressMeter
 using Random
+using Statistics
 
 include("Structs.jl")
 
@@ -150,6 +151,22 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) : params
 end
 
+export calculateAverageSpeed
+function calculateAverageSpeed(;data::Union{Nothing, typeof(StructArray(PositionalData[]))}=nothing)
+    f(d::typeof(StructArray(PositionalData[]))) = mean(d.sensorSpeed)
+
+    if isnothing(data) 
+        if length(trainData) == 0 @warn "Stack is empty!" else @info "Use data stored in stack." end
+
+        for d ∈ trainData
+            m = f(d[2])
+            println("Average Speed in data set: $(m)")
+        end
+    else
+        m = f(data)
+        println("Average Speed in data set: $(m)")
+    end
+end
 
 #helper function
 function transformVecToString(v::Vector{T}) where T <: Number
