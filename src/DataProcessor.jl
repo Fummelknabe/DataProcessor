@@ -140,8 +140,10 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     while meanError > minError && i < maxIterations
         inner_i = 0
         while true 
+            # find best parameter from selection P
             P = getNewParams(params)
             newMeanError = Inf64
+            localParams = P[1]
 
             for p ∈ P
                 #@info "Current Params: $(p)."
@@ -150,15 +152,19 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
                 # if new error is smaller take parameter
                 if e < newMeanError
                     newMeanError = e
-                    params = p
+                    localParams = p
                 end
             end
             inner_i += 1
 
             # Break out of loop
-            if newMeanError < meanError || inner_i == maxIterChangeParams 
+            if newMeanError < meanError 
                 meanError = newMeanError 
+                params = localParams
                 break 
+            # No better parameter was found 
+            elseif inner_i == maxIterChangeParams 
+                break
             end
         end
 

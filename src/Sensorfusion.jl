@@ -139,7 +139,7 @@ function computeSpeed(cameraMatrix::Matrix{Float32}, δt::Vector{Float32}, v::Fl
             ws = α < π/2 && 2*α > δ
       else
             # get direction of robot from command
-            if occursin("backward", command) & abs(v) < 0.3
+            if occursin("backward", command) && abs(v) < 0.3
                   sign = -1
             elseif occursin("forward", command) && abs(v) < 0.3
                   sign = 1
