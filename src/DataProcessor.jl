@@ -5,6 +5,7 @@ using LinearAlgebra
 using ProgressMeter
 using Random
 using Statistics
+using Base.Threads: @threads
 
 include("Structs.jl")
 
@@ -12,8 +13,8 @@ include("Structs.jl")
 This method loads hardcoded data files.
 """
 function loadTrainData()
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data_21_09_1.json", 1);
     loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data_12_09_1.json", 1);
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data_21_09_1.json", 1);
     loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data1_22_09_1.json", 1);
     loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data2_22_09_1.json", 1);
     loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data3_22_09_1.json", 1);
@@ -145,7 +146,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
             newMeanError = Inf64
             localParams = P[1]
 
-            for p ∈ P
+            @threads for p ∈ P
                 #@info "Current Params: $(p)."
                 e = calculateError(trainData, p, checkLoops)
 
