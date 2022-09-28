@@ -57,12 +57,12 @@ function UKF_update(μₜ̇::Vector{Float32}, wₘ::Vector{Float32}, wₖ::Vecto
     end
     zₜ = sum(wₘ[i+1]*Zₜ[:, i+1] for i ∈ 0:2*n)
 
-    Sₜ = sum(wₖ[i+1]*(Zₜ[:, i+1] - zₜ)*transpose(Zₜ[:, i+1] - zₜ) for i ∈ 0:2*n) + (ratedCC*p.measurementNoiseS+1)*Matrix(I, n, n)     
+    Sₜ = sum(wₖ[i+1]*(Zₜ[:, i+1] - zₜ)*transpose(Zₜ[:, i+1] - zₜ) for i ∈ 0:2*n) + (ratedCC*p.measurementNoiseS+1)*Matrix(I, n, n)        
 
     # calculate Kalman gain
     Kₜ = Matrix(I, n, n)
     try
-        Kₜ = sum(wₖ[i+1]*(Χₜ[i+1] - μₜ̇)*transpose(Zₜ[:, i+1] - zₜ) for i ∈ 0:2*n) * inv(Sₜ)
+        Kₜ = sum(wₖ[i+1]*(Χₜ[i+1] - μₜ̇)*transpose(Zₜ[:, i+1] - zₜ) for i ∈ 0:2*n) * Float32.(inv(Float64.(Sₜ)))
     catch e
         # for debug purposes
         @error "Matrix propably not invertable as it's singular: $(Sₜ), Parameters: $(p)"  
