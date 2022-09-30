@@ -21,3 +21,5 @@ must be added before training. To do this call the function `addInitialParameter
 `train(param="somefile.json")` or just the datatype `PredictionParameters` itself.  
 
 Tip: Use `;` to avoid prints to console when using in REPL.
+
+Another Tip: In order to utilize multithreading start julia session with `julia -t auto`.

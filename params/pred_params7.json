@@ -1,0 +1,23 @@
+{
+    "kalmanFilterCamera": true,
+    "kalmanFilterGyro": true,
+    "UKF": false,
+    "exponentCC": 5.6158524,
+    "useSinCC": false,
+    "speedExponentCC": 4.891277,
+    "speedUseSinCC": false,
+    "steerAngleFactor": 0.042026155,
+    "odoSteerFactor": 0.71567804,
+    "odoGyroFactor": 0.6806669,
+    "odoMagFactor": 0.053116377,
+    "processNoiseC": 0.041107785,
+    "measurementNoiseC": 62.738438,
+    "processNoiseG": 0.3780806,
+    "measurementNoiseG": 27.894308,
+    "processNoiseS": 0.19710977,
+    "measurementNoiseS": 13.329596,
+    "σ_forSpeedKernel": 0.23641045,
+    "ΨₒmagInfluence": false,
+    "κ": 1.01,
+    "α": 0.0
+}
