@@ -14,7 +14,7 @@
     "measurementNoiseC": 1.0,
     "processNoiseG": 0.1,
     "measurementNoiseG": 35.0,
-    "processNoiseS": 100.0,
+    "processNoiseS": 0.25,
     "measurementNoiseS": 5.0,
     "σ_forSpeedKernel": 0.13333334,
     "ΨₒmagInfluence": true,

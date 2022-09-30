@@ -191,6 +191,73 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
     return (randomRestart && length(initialParameters) > rri) ? train(maxIterations=maxIterations, minError=minError, maxIterChangeParams=maxIterChangeParams, saveAsFile=saveAsFile, randomRestart=true, rri=rri+1) : params
 end
 
+export calculateAverageParameters
+function calculateAverageParameters(params::Vector{Tuple{PredictionParameters, Float64}}; saveAsFile::Bool=true)
+    averageParameters = PredictionParameters(false, false, false, 0, false, 0, false, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0, 0.0)
+    
+    # collect errors
+    errors = Vector{Float64}(undef, 0)
+    for p ∈ params push!(errors, p[2]) end
+
+    (maxError, minError) = (maximum(errors), minimum(errors))
+    overAllWeights = 0
+    for p ∈ params
+        weight = (1 - (p[2] - minError)/(2 + maxError - minError))
+
+        averageParameters.exponentCC += weight*p[1].exponentCC
+        averageParameters.speedExponentCC += weight*p[1].speedExponentCC
+        averageParameters.steerAngleFactor += weight*p[1].steerAngleFactor
+        averageParameters.odoSteerFactor += weight*p[1].odoSteerFactor
+        averageParameters.odoGyroFactor += weight*p[1].odoGyroFactor
+        averageParameters.odoMagFactor += weight*p[1].odoMagFactor
+        averageParameters.processNoiseC += weight*p[1].processNoiseC
+        averageParameters.measurementNoiseC += weight*p[1].measurementNoiseC
+        averageParameters.processNoiseG += weight*p[1].processNoiseG
+        averageParameters.measurementNoiseG += weight*p[1].measurementNoiseG
+        averageParameters.processNoiseS += weight*p[1].processNoiseS
+        averageParameters.measurementNoiseS += weight*p[1].measurementNoiseS
+        averageParameters.σ_forSpeedKernel += weight*p[1].σ_forSpeedKernel
+        averageParameters.κ += weight*p[1].κ
+        averageParameters.α += weight*p[1].α
+
+        if weight == 1 # best parameter
+            averageParameters.kalmanFilterCamera = p[1].kalmanFilterCamera
+            averageParameters.kalmanFilterGyro = p[1].kalmanFilterGyro
+            averageParameters.UKF = p[1].UKF
+            averageParameters.useSinCC = p[1].useSinCC
+            averageParameters.speedUseSinCC = p[1].speedUseSinCC
+            averageParameters.ΨₒmagInfluence = p[1].ΨₒmagInfluence
+        end
+
+        overAllWeights += weight
+    end
+    overAllWeights = Float32(overAllWeights)
+    averageParameter = PredictionParameters(averageParameters.kalmanFilterCamera,
+                                            averageParameters.kalmanFilterGyro,
+                                            averageParameters.UKF,
+                                            averageParameters.exponentCC / overAllWeights,
+                                            averageParameters.useSinCC,
+                                            averageParameters.speedExponentCC / overAllWeights,
+                                            averageParameters.speedUseSinCC,
+                                            averageParameters.steerAngleFactor / overAllWeights,
+                                            averageParameters.odoSteerFactor / overAllWeights,
+                                            averageParameters.odoGyroFactor / overAllWeights,
+                                            averageParameters.odoMagFactor / overAllWeights,
+                                            averageParameters.processNoiseC / overAllWeights,
+                                            averageParameters.measurementNoiseC / overAllWeights,
+                                            averageParameters.processNoiseG / overAllWeights,
+                                            averageParameters.measurementNoiseG / overAllWeights,
+                                            averageParameters.processNoiseS / overAllWeights,
+                                            averageParameters.measurementNoiseS / overAllWeights,
+                                            averageParameters.σ_forSpeedKernel / overAllWeights,
+                                            averageParameters.ΨₒmagInfluence,
+                                            averageParameters.κ / overAllWeights,
+                                            averageParameters.α / overAllWeights)
+
+    if saveAsFile saveParamsJSon(averageParameter, fileName="averaged_params") end
+    return averageParameter
+end
+
 export calculateAverageSpeed
 function calculateAverageSpeed(;data::Union{Nothing, typeof(StructArray(PositionalData[]))}=nothing, leaveZeros::Bool=false)
     # Removing trailing and leading zero speed values from data
