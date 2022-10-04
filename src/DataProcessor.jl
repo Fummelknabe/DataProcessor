@@ -31,10 +31,10 @@ This method loads hardcoded parameter files.
 """
 function loadInitialParameters()
     # changed order of parameters
-    addInitialParameter(param="params/initial_params/pred_params2.json");
-    addInitialParameter(param="params/initial_params/pred_params1.json");
-    addInitialParameter(param="params/initial_params/pred_params3.json");
-    addInitialParameter(param="params/initial_params/pred_params4.json");
+    addInitialParameter(param="params/initial_params/init_params2.json");
+    addInitialParameter(param="params/initial_params/init_params1.json");
+    addInitialParameter(param="params/initial_params/init_params3.json");
+    addInitialParameter(param="params/initial_params/init_params4.json");
     addInitialParameter();
     addInitialParameter();
     addInitialParameter();
@@ -343,6 +343,7 @@ end
 include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")
+include("ArbitraryFunctions.jl")
 trainData = Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}(undef, 0);
 initialParameters = Vector{PredictionParameters}(undef, 0);
 
