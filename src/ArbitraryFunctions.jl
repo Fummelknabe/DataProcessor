@@ -5,7 +5,7 @@ function estimateWithAngularVel(posData::StructVector{PositionalData}, fileName:
     for i ∈ eachindex(posData)
         ω = posData[i].imuGyro
         δt = posData[i].deltaTime
-        estimation = hcat(estimation, [estimation[1, i] + ω[1]*δt; estimation[2, i] + ω[2]*δt; estimation[2, i] + ω[2]*δt])
+        estimation = hcat(estimation, [estimation[1, i] + ω[1]*δt; estimation[2, i] + ω[2]*δt; estimation[3, i] + ω[3]*δt])
     end
 
     # save matrix as .data file 
