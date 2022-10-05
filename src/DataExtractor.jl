@@ -46,6 +46,7 @@ function loadFromJSon(rotateCameraCoords::Bool, path::String)
     return posData
 end
 
+# This method is used for laoding true pos
 function loadFromJSon(path::String)
     posData = Matrix{Float32}(undef, 3, 0)
     try

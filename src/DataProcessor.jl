@@ -293,7 +293,7 @@ function transformVecToString(v::Vector{T}) where T <: Number
     return s
 end
 export saveDataToFile
-function saveDataToFile(data::Union{StructArray, Matrix}, filename::String)
+function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; correctOffset::Bool=false)
     if data isa Matrix
         @info "Save positional [x, y, z] data in file."
 
@@ -306,12 +306,13 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String)
     elseif data isa StructArray
         @info "Save sensor data from struct in file."
 
-        open(filename*".data", "w") do io             
-            for i ∈ 0:length(data)
-                if i == 0
+        open(filename*".data", "w") do io    
+            offset = Vector{Float32}(undef, 3)         
+            for i ∈ eachindex(data)
+                if i == 1
                     s = String("i steerAngle sensorAngle maxSpeed sensorSpeed cameraPosX cameraPosY cameraPosZ cameraPosChange cameraOriX cameraOriY cameraOriZ cameraOriW imuGyroX imuGyroY imuGyroZ imuAccX imuAccY imuAccZ imuMagX imuMagY imuMagZ deltaTime cameraConfidence")
                     write(io, s*"\n");
-                    continue
+                    correctOffset && global offset = data[i].imuGyro
                 end
 
                 s = String("")
@@ -325,7 +326,7 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String)
                 s = s*string(newData.sensorSpeed)*" "
                 s = s*transformVecToString(newData.cameraPos)
                 s = s*transformVecToString(newData.cameraOri)
-                s = s*transformVecToString(newData.imuGyro)
+                s = s*transformVecToString(newData.imuGyro - offset)
                 s = s*transformVecToString(newData.imuAcc)
                 s = s*transformVecToString(newData.imuMag)
                 s = s*string(newData.deltaTime)*" "
