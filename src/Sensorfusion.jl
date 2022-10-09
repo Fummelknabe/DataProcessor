@@ -6,11 +6,11 @@ predictedStates = StructArray(PositionalState[])
 rateCameraConfidence(cc, exponent, useSin::Bool) = Float32(useSin ? sin(π/2 * cc)^exponent : cc^exponent)
 
 # linearized system matrices
-F_c(state::PositionalState, u::PositionalData) = [1 0 0 -u.deltaTime*state.v*sin(state.Ψ) 0;
-                                                  0 1 0 u.deltaTime*state.v*cos(state.Ψ) 0;
-                                                  0 0 1 0 u.deltaTime*state.v*cos(state.θ);
-                                                  0 0 0 1 0;
-                                                  0 0 0 0 1]
+F_c(state::PositionalState, u::PositionalData, β::Float32) = [1 0 0 -u.deltaTime*state.v*cos(state.θ)*sin(state.Ψ+β) -u.deltaTime*state.v*sin(state.θ)*cos(state.Ψ+β);
+                                                              0 1 0 u.deltaTime*state.v*cos(state.θ)*cos(state.Ψ+β) -u.deltaTime*state.v*sin(state.θ)*sin(state.Ψ+β);
+                                                              0 0 1 0 u.deltaTime*state.v*cos(state.θ);
+                                                              0 0 0 1 0;
+                                                              0 0 0 0 1]
 
 F_g(δt::Float32) = [1 δt;
                     0 1]
@@ -66,7 +66,7 @@ function changeInPosition(a::Vector{Float32}, v::Float32, Ψ::Float32, θ::Float
       ẋ = (θᵢₙ ? cos(θ) : 1) * v * cos(Ψ + β)
       ẏ = (θᵢₙ ? cos(θ) : 1) * v * sin(Ψ + β)
 
-      ż = (θᵢₙ) ? v * sin(θ) : 0
+      ż = (θᵢₙ) ? v * -sin(θ) : 0
 
       return [ẋ*δt, ẏ*δt, ż*δt]
 end
@@ -138,7 +138,7 @@ function computeSpeed(cameraMatrix::Matrix{Float32}, δt::Vector{Float32}, v::Fl
             # check wheel slippage
             ws = α < π/2 && 2*α > δ
       else
-            # get direction of robot from command
+            # direction change should only occur when speed is relatively small
             if occursin("backward", command) && abs(v) < 0.3
                   sign = -1
             elseif occursin("forward", command) && abs(v) < 0.3
@@ -177,7 +177,7 @@ This function predicts the next position from given datapoints and the last posi
 # Returns
 - `PositionalState`: The new positional state of the robot.
 """
-function predict(posState::PositionalState, dataPoints::StructVector{PositionalData}, settings::PredictionParameters; #=onyl for debugging:=#iteration::Int=0)
+function predict(posState::PositionalState, dataPoints::StructVector{PositionalData}, settings::PredictionParameters)
       # Get data from data point
       amountDataPoints = length(dataPoints)
       amountDataPoints > 1 || throw("More than $(amountDataPoints) Data Points need to be given to predict position.")
@@ -249,7 +249,7 @@ function predict(posState::PositionalState, dataPoints::StructVector{PositionalD
       newPosition = posState.position + ((ws) ? δCamPos : (1-ratedCC)*δodometryPos + ratedCC*δCamPos)
       P_c_update = Matrix(I, 5, 5)
       if settings.kalmanFilterCamera
-            P_predict = P(F_c(posState, dataPoints[amountDataPoints]), settings.processNoiseC, posState.P_c, 5)
+            P_predict = P(F_c(posState, dataPoints[amountDataPoints], Float32(β(newData.steerAngle*π/180))), settings.processNoiseC, posState.P_c, 5)
             kalmanGain = K(P_predict, H_c, settings.measurementNoiseC, 3)
             P_c_update = P_predict .- kalmanGain*H_c*P_predict
             newPosition = posState.position + δodometryPos + kalmanGain[1:3, 1:3] * (dataPoints[amountDataPoints].cameraPos[1:3] - (posState.position + δodometryPos))
@@ -314,7 +314,7 @@ function predictFromRecordedData(posData::StructVector{PositionalData}, settings
                   estimatedStates[i-1],
                   # give mutiple positional data points if possible
                   (i > 9) ? posData[(i-9):i] : posData[(i-1):i],
-                  settings, iteration=i
+                  settings
             ))
       end
 

@@ -6,11 +6,14 @@ using ProgressMeter
 using Random
 using Statistics
 using Base.Threads: @threads
+using Images
+using FileIO
+using Colors
 
 include("Structs.jl")
 
 """
-This method loads hardcoded data files.
+This method loads hardcoded data files apart from data recorded at night.
 """
 function loadTrainData()
     loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data_21_09_1.json", 1);
@@ -29,16 +32,16 @@ end
 """
 This method loads hardcoded parameter files.
 """
-function loadInitialParameters()
+function loadInitialParameters(; numberOfRandomParams::Int=0)
     # changed order of parameters
     addInitialParameter(param="params/initial_params/init_params2.json");
     addInitialParameter(param="params/initial_params/init_params1.json");
     addInitialParameter(param="params/initial_params/init_params3.json");
     addInitialParameter(param="params/initial_params/init_params4.json");
-    addInitialParameter();
-    addInitialParameter();
-    addInitialParameter();
-    addInitialParameter();
+    
+    for i ∈ 1:numberOfRandomParams        
+        addInitialParameter();
+    end
 end
 
 
@@ -339,6 +342,76 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; corr
         @warn "Data given is not supported!"
         return
     end    
+end
+
+export extractPositionFromPathImage
+function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, pixelSize::Float32, filename::String)
+    img = load(path)
+
+    pxlPositions = Matrix{Float32}(undef, 2, 0)
+    alreadyVisited = Vector{Tuple{Int, Int}}(undef, 0)
+
+    currentPos = startPos
+    found = true
+
+    while found
+        found = false    
+        candidates = Vector{Tuple{Int, Int}}(undef, 0)
+        for x ∈ -1:1
+            for y ∈ -1:1
+                if x == 0 && y == 0 continue end
+                #println(img[currentPos[1]+x, currentPos[2]+y].r)
+                if img[currentPos[1]+x, currentPos[2]+y].r >= 0.5 && !((currentPos[1]+x, currentPos[2]+y) in alreadyVisited)
+                    push!(alreadyVisited, currentPos)
+                    push!(alreadyVisited, (currentPos[1]+x, currentPos[2]+y))
+                    push!(candidates, (currentPos[1]+x, currentPos[2]+y))                    
+                    found = true
+                end
+            end
+        end
+        if length(candidates) == 1
+            currentPos = candidates[1]
+            pxlPositions = hcat(pxlPositions, [currentPos[1], currentPos[2]])
+        elseif length(candidates) > 1 # to disallow 0
+            for p ∈ candidates
+                if abs(p[1] - currentPos[1]) + abs(p[2] - currentPos[2]) == 2
+                    currentPos = p 
+                    pxlPositions = hcat(pxlPositions, [currentPos[1], currentPos[2]])
+                    break
+                end
+            end
+        end
+        #@info "Found Pos: $(size(positions)[2])"
+    end
+
+    # Now calculate the dimensions with the pixel size
+
+    # define start position as zero
+    realPositions = pxlPositions .- pxlPositions[:, 1]
+    realPositions = realPositions .* [pixelSize, pixelSize]
+
+    # 55px ~ 80cm => 1 px ~ 1.4545
+    # Save real positions matrix as data file 
+    open(filename*".data", "w") do io    
+        for i ∈ 1:size(realPositions)[2]
+            if i == 1
+                s = String("i x y")
+                write(io, s*"\n");
+            end
+
+            s = String("")
+
+            newPos = realPositions[:,i]
+
+            s = s*string(i)*" "
+            s = s*string(newPos[1])*" "
+            s = s*string(newPos[2])*" "
+
+            write(io, s*"\n");
+        end
+    end;
+
+    return realPositions
 end
 
 include("Sensorfusion.jl")
