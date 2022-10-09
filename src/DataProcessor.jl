@@ -345,7 +345,7 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; corr
 end
 
 export extractPositionFromPathImage
-function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, pixelSize::Float32, filename::String)
+function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, pixelSize::Float32, filename::String; angleToRotate::Float32=0.0)
     img = load(path)
 
     pxlPositions = Matrix{Float32}(undef, 2, 0)
@@ -401,7 +401,7 @@ function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, p
 
             s = String("")
 
-            newPos = realPositions[:,i]
+            newPos = [cos(angleToRotate) -sin(angleToRotate); sin(angleToRotate) cos(angleToRotate)]*realPositions[:,i]
 
             s = s*string(i)*" "
             s = s*string(newPos[1])*" "
