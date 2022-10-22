@@ -345,8 +345,8 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; corr
 end
 
 export extractPositionFromPathImage
-function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, pixelSize::Float32, filename::String; angleToRotate::Float32=0.0)
-    img = load(path)
+function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, pixelSize::Float32, filename::String; angleToRotate::Float32=Float32(0.0))
+	img = load(path)
 
     pxlPositions = Matrix{Float32}(undef, 2, 0)
     alreadyVisited = Vector{Tuple{Int, Int}}(undef, 0)
