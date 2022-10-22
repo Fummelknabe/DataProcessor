@@ -381,8 +381,9 @@ function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, p
                 end
             end
         end
-        #@info "Found Pos: $(size(positions)[2])"
     end
+
+    @info "End Pixel: $(pxlPositions[:, end])"
 
     # Now calculate the dimensions with the pixel size
 
