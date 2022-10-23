@@ -415,6 +415,35 @@ function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, p
     return realPositions
 end
 
+export modifyTruePos
+function modifyTruePos(filename::String, transform::Matrix{Float64})
+    lines = Vector{String}(undef, 0)
+    try
+        lines = readlines(filename*".data")
+    catch e
+        if e isa SystemError
+            @info "The file does not exist!"
+            return
+        end
+        throw(e)
+    end
+    
+    for i ∈ eachindex(lines)
+        if i == 1 continue end
+        splitted = split(lines[i], " ")
+        vec = [parse(Float64, splitted[2]), parse(Float64, splitted[3]), 1.0]
+        # transform the data
+        vec = transform * vec
+        lines[i] = "i $(vec[1]) $(vec[2])"
+    end
+
+    open(filename*"_transformed"*".data", "w") do io    
+        for i ∈ eachindex(lines)
+            write(io, lines[i]*"\n");
+        end
+    end;
+end
+
 include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")

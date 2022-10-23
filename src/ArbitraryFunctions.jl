@@ -32,3 +32,14 @@ function estimateWithAngularVel(posData::StructVector{PositionalData}, fileName:
         end
     end;
 end
+
+export translation
+function translation(t::Vector{Float64})
+    length(t) < 2 && throw(ErrorException("Vector has to be of size 2!"))
+    return [1.0 0.0 t[1]; 0.0 1.0 t[2]; 0.0 0.0 1.0]
+end
+
+export rotation 
+function rotation(α::Float64)
+    return [cos(α) -sin(α) 0.0; sin(α) cos(α) 0.0; 0.0 0.0 1.0]
+end
