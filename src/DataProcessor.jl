@@ -174,6 +174,15 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
 end
 
 export calculateAverageParameters
+"""
+This method calculates the average of given parameters.
+
+# Arguments 
+`params::Vector{Tuple{PredictionParameters, Float64}}`: A vector containing the parameters and the associated error that comes with them.
+
+# Optional Arguments
+`saveAsFile::Bool=true`: If the resulting set of parameters should be saved as a file.
+"""
 function calculateAverageParameters(params::Vector{Tuple{PredictionParameters, Float64}}; saveAsFile::Bool=true)
     averageParameters = PredictionParameters(false, false, false, 0, false, 0, false, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0, 0.0)
     
