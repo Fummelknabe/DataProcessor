@@ -1,4 +1,7 @@
 export estimateWithAngularVel
+"""
+This method estimate position from purely the angular velocity and converts the resulting states to .data file.
+"""
 function estimateWithAngularVel(posData::StructVector{PositionalData}, fileName::String; correctOffset::Bool=false)
     estimation = Matrix{Float32}(undef, 3, 1)
     offset = Vector{Float32}(undef, 3)
@@ -31,6 +34,22 @@ function estimateWithAngularVel(posData::StructVector{PositionalData}, fileName:
             write(io, s*"\n");
         end
     end;
+end
+
+function deleteUnimportantData(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}})
+    updatedData = Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}(undef, 0)
+    for d ∈ trainData
+        lastIndex = length(d[2])
+        for i ∈ length(d[2]):-1:1
+            if d[2][i].sensorSpeed == 0.0 && occursin("stop_", d[2][i].command)
+                lastIndex = i
+            else
+                break
+            end
+        end
+        push!(updatedData, (d[1], d[2][1:lastIndex], d[3]))
+    end
+    return updatedData
 end
 
 export translation

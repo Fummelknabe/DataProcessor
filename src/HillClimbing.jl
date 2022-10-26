@@ -1,4 +1,6 @@
-
+"""
+This function calculates the errors on positional data and returns the mean error value.
+"""
 function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters, checkLoops::Bool)
     X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
 
@@ -29,6 +31,35 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
     end
 
     return accumulatedError / length(X)
+end
+
+"""
+This function calculates the errors on positional data and returns for each data point the corresponding error value.
+"""
+function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters)
+    X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
+
+    for d ∈ trainData
+        x = predictFromRecordedData(d[2], params)
+        push!(X, x)
+
+        # Check number of loops exceeds tolerable orientation change
+        tolerableOrientationChange = d[1] * 2*π + π
+        if abs(x.Ψ[1] - x.Ψ[end]) > tolerableOrientationChange 
+            return Inf64
+        end
+    end
+
+    
+    errors = Vector{Float32}(undef, 0)
+    orientationErrors = Vector{Float32}(undef, 0)
+    for i ∈ 1:length(X)
+        push!(errors, norm(X[i][1].position - X[i][end].position))
+        push!(orientationErrors, norm([X[i][1].Ψ, X[i][1].θ, X[i][1].ϕ] - [X[i][end].Ψ - (i == 1 ? π/2 : 0), X[i][end].θ, X[i][end].ϕ]))
+    end    
+    
+
+    return errors, orientationErrors
 end
 
 function getNewParams(params::PredictionParameters)

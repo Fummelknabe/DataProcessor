@@ -12,38 +12,17 @@ using Colors
 
 include("Structs.jl")
 
-"""
-This method loads hardcoded data files apart from data recorded at night.
-"""
-function loadTrainData()
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data_21_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data_12_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data1_22_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data2_22_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data3_22_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data1_26_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data2_26_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data3_26_09_3.json", 3);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data4_26_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data5_26_09_1.json", 1);
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data6_26_09_1.json", 1);
+function  loadTestData()
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_forest_1_180.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_forest_3.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_lab_1.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_lab_2.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_lab_3.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_park_1.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_park_3.json", 1)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_2_forest_2.json", 2)
+    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_2_park_2.json", 2)
 end
-
-"""
-This method loads hardcoded parameter files.
-"""
-function loadInitialParameters(; numberOfRandomParams::Int=0)
-    # changed order of parameters
-    addInitialParameter(param="params/initial_params/init_params2.json");
-    addInitialParameter(param="params/initial_params/init_params1.json");
-    addInitialParameter(param="params/initial_params/init_params3.json");
-    addInitialParameter(param="params/initial_params/init_params4.json");
-    
-    for i ∈ 1:numberOfRandomParams        
-        addInitialParameter();
-    end
-end
-
 
 export loadDataToStack
 """
