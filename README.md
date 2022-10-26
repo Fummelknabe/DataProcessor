@@ -2,12 +2,6 @@
 
 This package calculates parameters for Sensorfusion of an motion estimation with specific data.
 
-`loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/big_loop_park_sunny_maxW.json", 1);
-loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/eight_park_spatial_memory.json", 2);
-loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/drone_shot_park_7_9_2.json", 2);
-saveDataToFile(DataProcessor.loadFromJSon(true, "C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/Recorded Data/train_data1_22_09_1.json"), "train_data1_22_09_1")
-push!(params, (DataProcessor.loadFromJSon("C:/Users/Hurensohn/Desktop/Parameter/params_complete_dataset/pred_params1_se20.7_fe2.6.json"), 2.6615))`
-
 ## Usage
 
 Load Positional Data to the stack with: 
