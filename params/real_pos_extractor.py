@@ -1,6 +1,6 @@
 """
-Simple example that connects to the first Crazyflie found, logs the Stabilizer
-and prints it to the console. After 10s the application disconnects and exits.
+A simple python program that saves the position from the locopositioning system 
+to a json file.
 """
 from asyncio.base_subprocess import WriteSubprocessPipeProto
 import logging
