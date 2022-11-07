@@ -1,6 +1,15 @@
 module DataProcessor
 # main file of the module
 
+#=
+This software should be used from the command line. Consult the README for an overview of the basic functionality. 
+Some functions implemented are extremely niche and fulfill only one purpose. These were mostly not described in detail. 
+
+The most important functions are in HillClimbing.jl and the functions loadDataToStack, addInitialParameter and the train function. 
+With these the optimal parameters given a train set can be calculated. For averaging the parameters, calculateAverageParameters can
+be used.
+=#
+
 using StructArrays
 using LinearAlgebra
 using ProgressMeter
