@@ -1,9 +1,23 @@
-#= Use as State: 
+# This file contains functionality to realize the UKF in code.
+
+#= 
+Use as State: 
     x = [p_x, p_y, p_z, Ψ, Θ]
-    # The Roll angle is not used here as it is not relevant for position change
-   Use as Input:
+The Roll angle is not used here as it is not relevant for position change
+
+Use as Input:
     u = [w_x, w_y, w_z, v, dt, steerAngle]
 =#
+
+"""
+This function updates the state according to definitions on top of the file.
+# Arguments 
+- `s::Vector{Float32}`: The last state of the system. 
+- `u::Vector{Float32}`: The input to update the estimation.
+
+# Returns 
+- `Vector{Float32}`: The resulting updated state vector. 
+"""
 function f(s::Vector{Float32}, u::Vector{Float32})
     Ψₜ = Ψ(s[4], u[5], u[6], β(u[6]), u[4])
     θₜ = θ_ang(s[5], u[5], [u[1], u[2], u[3]])
@@ -31,12 +45,17 @@ This performs the whole prediction step for the UKF.
 - `Σₜ`: New covariance.
 """
 function UKF_prediction(μₜ₋₁::Vector{Float32}, wₘ::Vector{Float32}, wₖ::Vector{Float32}, Χₜ₋₁::Vector{Vector{Float32}}, uₜ::Vector{Float32}, Σₜ₋₁::Matrix{Float32}, p::PredictionParameters)
-     F = Matrix{Float32}(undef, n, 0)
+    # Compute F matrix
+    F = Matrix{Float32}(undef, n, 0)
     for i ∈ 0:2*n  F = hcat(F, f(Χₜ₋₁[i+1], uₜ)) end
+
+    # mean of the state
     μₜ̇ = sum(wₘ[i+1]*F[:, i+1] for i ∈ 0:2*n)
 
+    # generate new sigma points
     Χₜ = generateSigmaPoints(μₜ₋₁, Σₜ₋₁, p)
 
+    # compute covariance
     Σₜ = sum(wₖ[i+1]*(F[:, i+1] - μₜ̇)*transpose(F[:, i+1] - μₜ̇) for i ∈ 0:2*n) + p.processNoiseS*Matrix(I, size(Σₜ₋₁))# not sure if this should be added inside of sum
 
     return μₜ̇, Χₜ, Σₜ
@@ -51,12 +70,16 @@ Update step of the unscented Kalman Filter.
 - `Σₜ`: The new covariance.
 """
 function UKF_update(μₜ̇::Vector{Float32}, wₘ::Vector{Float32}, wₖ::Vector{Float32}, Χₜ::Vector{Vector{Float32}}, Σₜ̇::Matrix{Float32}, p::PredictionParameters, measurement::Vector{Float32}, ratedCC::Float32)
+    # Compute measurement matrix
     Zₜ = Matrix{Float32}(undef, n, 0)
     for i ∈ 1:2*n+1
         Zₜ = hcat(Zₜ, Χₜ[i])# normally: Hₛ*Χₜ[i]
     end
+
+    # measurement mean
     zₜ = sum(wₘ[i+1]*Zₜ[:, i+1] for i ∈ 0:2*n)
 
+    # Define helper matrix 
     Sₜ = sum(wₖ[i+1]*(Zₜ[:, i+1] - zₜ)*transpose(Zₜ[:, i+1] - zₜ) for i ∈ 0:2*n) + ((1-ratedCC)*p.measurementNoiseS)*Matrix(I, n, n)        
 
     # calculate Kalman gain
@@ -64,6 +87,8 @@ function UKF_update(μₜ̇::Vector{Float32}, wₘ::Vector{Float32}, wₖ::Vecto
 
     μₜ = μₜ̇ + Kₜ*(measurement - zₜ)
     Σₜ = Σₜ̇ - Kₜ*Sₜ*transpose(Kₜ)
+
+    # Contrain the covariance matrix
     Σₜ[isnan.(Σₜ)] .= 0.0
     Σₜ[isinf.(Σₜ)] .= 1e10
 
@@ -76,6 +101,8 @@ Compute the weights for the unscented transform.
 # Arguments
 - `mean::Bool`: If true computes weights for mean, if not for covariance.
 - `params::PredictionSettings`: Parameters to influence estimation.
+# Returns 
+- `Vector{Float32}`: The new weights.
 """
 function computeWeights(mean::Bool, p::PredictionParameters)
     w = Vector{Float32}(undef, 0)
@@ -97,6 +124,8 @@ Generate Sigma points from previous mean and covariance.
 - `μₜ::Vector{Float32}`: The previous state containing the position and θ, Ψ
 - `Σₜ::Matrix{Float32}`: The covariance of previous estimation.
 - `p::PredictionSettings`: Parameters to influence estimation.
+# Returns
+- `Vector{Vector{Float32}}`: The new sigma points.
 """
 function generateSigmaPoints(μₜ₋₁::Vector{Float32}, Σₜ₋₁::Matrix{Float32}, p::PredictionParameters)
     # Define vector holding sigma points
@@ -114,11 +143,11 @@ function generateSigmaPoints(μₜ₋₁::Vector{Float32}, Σₜ₋₁::Matrix{F
 
     # Add the remaining sigma points spread around mean
     for i ∈ 1:n
-        push!(Χ, μₜ₋₁ + matrixRoot[:, i])#round.(μₜ₋₁ + matrixRoot[:, i], digits=4))
+        push!(Χ, μₜ₋₁ + matrixRoot[:, i])
     end
 
     for i ∈ 1:n
-        push!(Χ, μₜ₋₁ - matrixRoot[:, i])#round.(μₜ₋₁ - matrixRoot[:, i], digits=4))
+        push!(Χ, μₜ₋₁ - matrixRoot[:, i])
     end
     return Χ
 end

@@ -1,7 +1,19 @@
+# This file implements functions that are used to handle data.
+
 using JSON
 
+# The first value of the magnetometer
 firstMagValue = -1
 
+"""
+Converts a dictionary to PositionalData datatype.
+
+# Arguments
+- `dict::Dict`: The dict to convert
+- `rotateCameraCoords::Bool`: Should the camera coordinates be rotated to match IMU data
+# Returns 
+- `PositionalData`: All the positional data combined in one datatype
+"""
 function convertDictToPosData(dict::Dict, rotateCameraCoords::Bool)
     posData = PositionalData()
         
@@ -27,6 +39,17 @@ function convertDictToPosData(dict::Dict, rotateCameraCoords::Bool)
     return posData
 end
 
+"""
+Loads positional data from a json file. The file is selected manually through a dialog in the GUI.
+
+# Optional Arguments
+- `rotateCameraCoords::Bool`: Should the camera coordinates be rotated to match IMU data
+- `flipCameraCoords::Bool`: Additional rotation of the camera data by 180 degrees
+- `loadGPSData::Bool`: Should gps data be loaded, otherwise its `[0, 0]`
+- `deleteData::Bool`: Deletes part of positional data that contain no information
+# Returns 
+- `StructArray{PositionalData}`: An array holding the positional data
+"""
 function loadFromJSon(rotateCameraCoords::Bool, path::String)
     posData = StructArray(PositionalData[]);
     try
@@ -46,7 +69,14 @@ function loadFromJSon(rotateCameraCoords::Bool, path::String)
     return posData
 end
 
-# This method is used for laoding true pos
+"""
+This funciton loads the true positional value from a .json file.
+
+# Argument 
+- `path::String`: The path to the .json file.
+# Returns 
+- `Matrix{Float32}`: Matrix containing the position information in its coloums. 
+"""
 function loadFromJSon(path::String)
     posData = Matrix{Float32}(undef, 3, 0)
     try
@@ -66,6 +96,15 @@ function loadFromJSon(path::String)
     return posData
 end
 
+"""
+This function loads parameters used for estimation from json file. 
+
+# Arguments 
+- `filePath::String`: Path to .json file containing parameter information. 
+
+# Returns
+- `PredictionSettings`: The settings described in the json file
+"""
 function loadParamsFromJSon(filePath::String)
     params = PredictionParameters()
     paramsDict = JSON.parsefile(filePath, dicttype=Dict, inttype=Int64)
@@ -95,6 +134,14 @@ function loadParamsFromJSon(filePath::String)
     return params
 end
 
+"""
+This function saves parameters from `PredictionParameters` to a .json file.
+
+# Argument 
+- `params::PredictionParameters`: The parameters to save as a file. 
+# Optional Arguments 
+- `fileName::Union{String, Nothing}`: The file name to save the parameters to. If `nothing` "pred_params.json" is used.
+"""
 function saveParamsJSon(params::PredictionParameters; fileName::Union{String, Nothing}=nothing)
     name = isnothing(fileName) ? "pred_params" : fileName
     open("params/$(name).json", "w") do ioStream

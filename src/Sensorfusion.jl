@@ -1,8 +1,14 @@
+# This file contains functions to estimate pose from positional data
+
 using DSP
 using LinearAlgebra
 
+# Vector that contains estimated states 
 predictedStates = StructArray(PositionalState[])
 
+"""
+This function rates the camera confidence value. The outcome depends on the parameters given. 
+"""
 rateCameraConfidence(cc, exponent, useSin::Bool) = Float32(useSin ? sin(π/2 * cc)^exponent : cc^exponent)
 
 # linearized system matrices
@@ -44,20 +50,28 @@ function θ_ϕ_acc(a::Vector{Float32}, Ψ::Float32)
       # rotate horizontal axis by yaw angle
       x_plane = [cos(Ψ), sin(Ψ), 0]
 
+      # get axis on vehicle frame
       y_v = cross(a, x_plane)
       x_v = cross(y_v, a)
 
+      # compute final rotational values
       θ = sign(x_v[3])*Float32(acos(round(dot(x_v, x_plane)/(norm(x_v)*norm(x_plane)); digits=3)))
       ϕ = sign(y_v[3])*Float32(acos(round(dot(y_v, [y_v[1], y_v[2], 0])/(norm(y_v)*norm([y_v[1], y_v[2], 0])); digits=3)))
 
       return θ, ϕ
 end
 
+# calculate β from the kinematic bicycle model
 β(δ) = Float32(atan(lₕ/(lᵥ+lₕ)*tan(δ)))
 
+# the covariance matrix for the optional EKF
 P(F, Q, oldP, size) = F*oldP*transpose(F) .+ Q*Matrix(I, size, size)
+# the kalman gain for the optional EKF
 K(P, H, R, size) = P*transpose(H)*(H*P*transpose(H) .+ R*Matrix(I, size, size))^-1
 
+"""
+Compute change in position given many different parameters. 
+"""
 function changeInPosition(a::Vector{Float32}, v::Float32, Ψ::Float32, θ::Float32, δt::Float32; β::Float32=Float32(0.0))
       # Only when a significant deviation from z-Axis = 1g 
       θᵢₙ = abs(a[3] - 1) > 0.02
@@ -77,6 +91,12 @@ include("UKF.jl")
 This function transforms camera coords ontop of the prediction. This should be 
 unnecessary if the correct initial transform is choosen for the camera. 
 (for old data, this has to be used)
+
+# Arguments
+- `cameraCoords::Vector{Float32}`: The camera position to transform as vector.
+- `Ψ::Float32`: The angle to rotate given position.
+# Returns 
+- `Vector{Float32}`: The transformed camera position.
 """
 function transformCameraCoords(cameraCoords::Vector{Float32}, Ψ::Float32)
       # Create 2D rotational matrix
@@ -89,14 +109,17 @@ function transformCameraCoords(cameraCoords::Vector{Float32}, Ψ::Float32)
 end
 
 """
-This function transforms a given position so that the z-vector points up in the intertial frame 
+This function transforms a given position so that the z-vector points up in the inertial frame 
 
-# Arguments
-`pos::Vector{Float32}`: The position to transform
-`up::Vector{Float32}`: The vector that holds the acceleration data 
-
+# Arguments 
+Definition: `T <: Real`
+- `pos::Vector{T}`: The position to transform.
+- `up::Vector{T}`: The vector that holds the acceleration data.
+- `angularSpeed::Vector{T}`: The angular speed measured in the vehicle reference point.
+- `weights::Tuple{T, T}`: Weights to influence influence of acceleration and angular velocity.
+- `δt::T`: The time passed since last state update.
 # Returns 
-`Vector{Float32}`: The transformed position
+- `Vector{T}`: The transformed position.
 """
 function transformCoords(pos::Vector{T}, up::Vector{T}, angularSpeed::Vector{T}, weights::Tuple{T, T}, δt::T) where {T <: Real}
     # Projection in planes
@@ -107,6 +130,7 @@ function transformCoords(pos::Vector{T}, up::Vector{T}, angularSpeed::Vector{T},
     α = weights[1] * -acos(projXZ[3] / norm(projXZ)) + weights[2] * angularSpeed[2]*δt 
     β = weights[1] * -acos(projYZ[3] / norm(projYZ)) + weights[2] * angularSpeed[1]*δt
 
+    # Define rotational matrices
     Rx = [1     0      0;
           0 cos(β) -sin(β); 
           0 sin(β) cos(β)]    
@@ -118,7 +142,19 @@ function transformCoords(pos::Vector{T}, up::Vector{T}, angularSpeed::Vector{T},
 end
 
 """
-This function computes the speed from measured speed and camera position.
+This function computes the speed from measured speed by wheel encoder and camera position.+
+
+# Arguments 
+- `cameraMatrix::Matrix{Float32}`: The last couple of estimates made by the VO-System in matrix form.
+- `δt::Vector{Float32}`: The time passed since last state update.
+- `v::Float32`: The speed as measured by the wheel encoder.
+- `ratedCamConfidence::Float32`: The rated camera confidence.
+- `σ::Float32`: The variance for the kernel to smooth camera change.
+- `command::String`: The command sent to the robot.
+- `pastBackwards::Bool`: If the robot was going backwards in prev. state.  
+- `δ::Float32`: The steering angle of the robot.
+# Returns 
+- `Tuple{Float32, Bool}`: Estimated speed value and if wheel slippage is suspected to be occuring.
 """
 function computeSpeed(cameraMatrix::Matrix{Float32}, δt::Vector{Float32}, v::Float32, ratedCamConfidence::Float32, σ::Float32, command::String, pastBackwards::Bool, δ::Float32)
       cameraChange = cameraMatrix[:, 4]
@@ -156,6 +192,15 @@ function computeSpeed(cameraMatrix::Matrix{Float32}, δt::Vector{Float32}, v::Fl
       return sign*(ws ? Float32(cameraSpeed[l]) : (Float32((1-ratedCamConfidence) * v + ratedCamConfidence * cameraSpeed[l]))), ws
 end
 
+"""
+Extracts Taitbryan angles from camera orientation change. 
+
+# Arguments 
+- `state::PositionalState`: The previous positional state. 
+- `dataPoints::StructVector{PositionalData}`: The last few data points recorded.
+# Return 
+- `Float32, Float32, Float32`: The three Taitbryan angles. 
+"""
 function extractTaitbryanFromOrientation(state::PositionalState, dataPoints::StructVector{PositionalData})
       cameraOrientation = (dataPoints[end].cameraOri, dataPoints[end-1].cameraOri)
 
@@ -168,12 +213,12 @@ function extractTaitbryanFromOrientation(state::PositionalState, dataPoints::Str
 end
 
 """
-This function predicts the next position from given datapoints and the last positinal state.
+This function predicts/estimates the next state from given datapoints and the last positinal state.
 
 # Arguments
 - `posState::PositionalState`: The last positional state. 
 - `dataPoints::StructVector{PositionalData}`: An array of datapoints. There should atleast 2 data points to more accurately predict position. 
-
+- `settings::PredictionSettings`: The parameters to influence the estimation.
 # Returns
 - `PositionalState`: The new positional state of the robot.
 """
@@ -211,8 +256,10 @@ function predict(posState::PositionalState, dataPoints::StructVector{PositionalD
                                                 newData.deltaTime,
                                                 β=Float32(β(newData.steerAngle*π/180)))
       else
+            # compute weights for UKF
             wₘ = computeWeights(true, settings)
             wₖ = computeWeights(false, settings)
+            # execute prediction step
             μₜ̇, Χₜ, Σₜ̇ = UKF_prediction(Float32.([posState.position[1], posState.position[2], posState.position[3], posState.Ψ, posState.θ]),
                                     wₘ,
                                     wₖ,
@@ -221,6 +268,7 @@ function predict(posState::PositionalState, dataPoints::StructVector{PositionalD
                                     posState.Σ,
                                     settings)
                   
+            # execute update step
             μₜ, Σₜ = UKF_update(μₜ̇, wₘ, wₖ, Χₜ, Σₜ̇, settings, [newData.cameraPos[1], newData.cameraPos[2], newData.cameraPos[3], convertMagToCompass(newData.imuMag), θ_acc], ratedCC)
 
             δOdoSteeringAngle = μₜ[1:3] - posState.position
@@ -232,23 +280,30 @@ function predict(posState::PositionalState, dataPoints::StructVector{PositionalD
             posState.Χ = Χₜ
       end
 
+      # compute change in position caused by angular velocity
       δOdoAngularVelocity = changeInPosition(newData.imuAcc, 
                                              v, 
                                              settings.kalmanFilterGyro ? Float32(Ψ_ang) : Ψ(posState.Ψ, newData.deltaTime, newData.imuGyro),
                                              θ_ang(posState.θ, newData.deltaTime, newData.imuGyro),
                                              newData.deltaTime)
 
+      # compute change in position caused by compass course
       δOdoCompassCourse = changeInPosition(newData.imuAcc,
                                            v,
                                            convertMagToCompass(newData.imuMag, accelerometerVector=newData.imuAcc),
                                            θ_ang(posState.θ, newData.deltaTime, newData.imuGyro),
                                            newData.deltaTime)
 
+      # change in camera position
       δCamPos = dataPoints[amountDataPoints].cameraPos[1:3] - dataPoints[amountDataPoints - 1].cameraPos[1:3]
 
+      # combined odometry position
       δodometryPos = (settings.odoGyroFactor.*δOdoAngularVelocity .+ settings.odoSteerFactor.*δOdoSteeringAngle .+ settings.odoMagFactor.*δOdoCompassCourse) ./ (settings.odoGyroFactor + settings.odoMagFactor + settings.odoSteerFactor)
 
+      # combine using weights
       newPosition = posState.position + ((ws) ? δCamPos : (1-ratedCC)*δodometryPos + ratedCC*δCamPos)
+
+      # use EKF for combining camera with odometry state
       P_c_update = Matrix(I, 5, 5)
       if settings.kalmanFilterCamera
             P_predict = P(F_c(posState, dataPoints[amountDataPoints], Float32(β(newData.steerAngle*π/180))), settings.processNoiseC, posState.P_c, 5)
@@ -257,11 +312,13 @@ function predict(posState::PositionalState, dataPoints::StructVector{PositionalD
             newPosition = posState.position + δodometryPos + kalmanGain[1:3, 1:3] * (dataPoints[amountDataPoints].cameraPos[1:3] - (posState.position + δodometryPos))
       end
 
+      # combine angles
       Ψᵥₒ, θᵥₒ, ϕᵥₒ = extractTaitbryanFromOrientation(posState, dataPoints)
       Ψₒ = (settings.odoSteerFactor*Ψ_acc+settings.odoGyroFactor*(settings.kalmanFilterGyro ? Float32(Ψ_ang) : Ψ(posState.Ψ, newData.deltaTime, newData.imuGyro))+(settings.ΨₒmagInfluence ? settings.odoMagFactor*convertMagToCompass(newData.imuMag) : 0)) / (settings.odoGyroFactor + (settings.ΨₒmagInfluence ? settings.odoMagFactor : 0) + settings.odoSteerFactor)
       θ₀ = (settings.odoSteerFactor*θ_acc+settings.odoGyroFactor*θ_ang(posState.θ, newData.deltaTime, newData.imuGyro)+settings.odoMagFactor*θ_ang(posState.θ, newData.deltaTime, newData.imuGyro)) / (settings.odoGyroFactor + settings.odoMagFactor + settings.odoSteerFactor)
       ϕ₀ = (settings.odoSteerFactor*ϕ_acc+settings.odoGyroFactor*ϕ_ang(posState.ϕ, newData.deltaTime, newData.imuGyro)) / (settings.odoGyroFactor + settings.odoSteerFactor)
 
+      # return updated state
       return PositionalState(newPosition,
                              v,
                              (ws) ? Ψᵥₒ : (1-ratedCC)*Ψₒ + ratedCC*Ψᵥₒ, 
@@ -300,7 +357,9 @@ This function predicts position from recorded data.
 
 # Arguments
 - `posData::StructVector{PositionalData}`: The recorded data points.
-- `settings::PredictionParameters`: The parameters to influence prediction quality.
+- `settings::PredictionSettings`: The parameters to influence prediction quality.
+# Returns 
+- `StructVector{PositionalState}`: A vector containing the estimated positional states. 
 """
 function predictFromRecordedData(posData::StructVector{PositionalData}, settings::PredictionParameters)
       # Set up predicted states and initialize first one
@@ -324,10 +383,11 @@ function predictFromRecordedData(posData::StructVector{PositionalData}, settings
 end
 
 """
-Start sensor fusion with a continuous flow of data.
+Start sensor fusion with a continuous flow of data. Updates the global StructVector that holds the estimated states.
 
 # Arguments
 - `posData::StructVector{PositionalData}`: The last recorded data points. Length should be more than 2.
+- `settings::PredictionSettings`: The parameters to influence prediction quality.
 """
 function initializeSensorFusion(posData::StructVector{PositionalData}, settings::PredictionParameters)
       if length(predictedStates) == 0

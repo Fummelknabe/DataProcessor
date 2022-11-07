@@ -1,5 +1,12 @@
 """
 This function calculates the errors on positional data and returns the mean error value.
+
+# Arguments 
+- `trainData::ComplicatedType`: The global train data.
+- `params::PredictionParameters`: The parameters to use when calculating the error.
+- `checkLoops::Bool`: Check if an unrealistic amount of loops were estimated with given parameters. 
+# Returns 
+- `Float64`: The error arising from the train data with given parameters. 
 """
 function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters, checkLoops::Bool)
     X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
@@ -25,8 +32,7 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
             accumulatedError += norm(X[i][1].position - X[i][end].position)
         else
             # Compare with real position
-            # TODO
-            @warn "Comparing with real position is still WIP"
+            @warn "Comparing with real position is WIP"
         end
     end
 
@@ -35,6 +41,13 @@ end
 
 """
 This function calculates the errors on positional data and returns for each data point the corresponding error value.
+
+# Arguments 
+- `trainData::ComplicatedType`: The global train data.
+- `params::PredictionParameters`: The parameters to use when calculating the error.
+# Returns 
+- `Vector{Float32}`: The positional errors arising from the train data with given parameters. 
+- `Vector{Float32}`: The orientational errors arising from the train data with given parameters.
 """
 function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}, params::PredictionParameters)
     X = Vector{typeof(StructArray(PositionalState[]))}(undef, 0)
@@ -54,7 +67,9 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
     errors = Vector{Float32}(undef, 0)
     orientationErrors = Vector{Float32}(undef, 0)
     for i ∈ 1:length(X)
-        push!(errors, norm(X[i][1].position - X[i][end].position))
+        # calculate positional error
+        push!(errors, norm(X[i][1].position - X[i][end].position)),
+        # calculate orientational error
         push!(orientationErrors, norm([X[i][1].Ψ, X[i][1].θ, X[i][1].ϕ] - [X[i][end].Ψ - (i == 1 ? π/2 : 0), X[i][end].θ, X[i][end].ϕ]))
     end    
     
@@ -62,6 +77,14 @@ function calculateError(trainData::Vector{Tuple{Int64, typeof(StructArray(Positi
     return errors, orientationErrors
 end
 
+"""
+This function alters a given parameter set.
+    
+# Argument 
+- `params::PredictionParameters`: The parameters to alter. 
+# Returns 
+- `Vector{PredictionParameters}`: A vector of parameters changed in every possible way from given parameters.
+"""
 function getNewParams(params::PredictionParameters)
     possibleParams = Vector{PredictionParameters}(undef, 0)
 

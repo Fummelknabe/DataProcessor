@@ -1,4 +1,5 @@
 module DataProcessor
+# main file of the module
 
 using StructArrays
 using LinearAlgebra
@@ -11,18 +12,6 @@ using FileIO
 using Colors
 
 include("Structs.jl")
-
-function  loadTestData()
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_forest_1_180.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_forest_3.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_lab_1.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_lab_2.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_lab_3.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_park_1.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_1_park_3.json", 1)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_2_forest_2.json", 2)
-    loadDataToStack("C:/Users/Hurensohn/Documents/UniKrams/Bachelorarbeit/SensorFusionBA_ATRP/data/new_test_data/test_data_2_park_2.json", 2)
-end
 
 export loadDataToStack
 """
@@ -46,8 +35,10 @@ function loadDataToStack(path::String, numberOfLoops::Int; rotateCameraCoords::B
     push!(trainData, (numberOfLoops, posData, cmp(pathPosTracking, String("")) == 0 ? nothing : loadFromJSon(pathPosTracking)));
 end
 
+
 export getLength
 getLength() = @info "Length of stack: " * string(length(trainData))
+
 
 export addInitialParameter
 """
@@ -103,6 +94,8 @@ This function executes the hillclimbing itself. The data to train with should be
 - `saveAsFile::Bool`: If resulting parameters should be saved as a JSON file.
 - `randomRestart::Bool`: Restart algorithm with initial parameters provided in `initialParameters`.
 - `checkLoops::Bool`: If the number of loops should be checked upon estimation.
+
+`rri` is a hidden parameter and should not be changed.
 """
 function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChangeParams=100, saveAsFile::Bool=false, randomRestart::Bool=false, rri::Integer=1, checkLoops::Bool=true)
     len = length(trainData)
@@ -130,7 +123,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
             localParams = P[1]
 
             @threads for p ∈ P
-                #@info "Current Params: $(p)."
+                # calculate error for given parameters
                 e = calculateError(trainData, p, checkLoops)
 
                 # if new error is smaller take parameter
@@ -152,6 +145,7 @@ function train(;maxIterations::Integer=1000, minError::Float64=1.0, maxIterChang
             end
         end
 
+        # check if local maxima was found
         if inner_i == maxIterChangeParams
             println()
             @info "No better Value was found -> local minima with Parameters: $(params) with error: $(meanError) after $(i) iteration(s)"
@@ -182,6 +176,9 @@ This method calculates the average of given parameters.
 
 # Optional Arguments
 `saveAsFile::Bool=true`: If the resulting set of parameters should be saved as a file.
+
+# Returns
+- `PredictionParameters`: The average parameter.
 """
 function calculateAverageParameters(params::Vector{Tuple{PredictionParameters, Float64}}; saveAsFile::Bool=true)
     averageParameters = PredictionParameters(false, false, false, 0, false, 0, false, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, 0.0, 0.0)
@@ -250,6 +247,13 @@ function calculateAverageParameters(params::Vector{Tuple{PredictionParameters, F
 end
 
 export calculateAverageSpeed
+"""
+This method calculates the average speed of positional data sets. If no data is given as argument, the global variable `trainData` is used.
+
+# Optional Arguments
+- `data::Union{Nothing, typeof(StructArray(PositionalData[]))}`: The data set to use for calculating average speed.
+- `leaveZeros::Bool`: Should unimportant data be removed. Unimportant data would be leading and trailing data points where the speed value is zero.
+"""
 function calculateAverageSpeed(;data::Union{Nothing, typeof(StructArray(PositionalData[]))}=nothing, leaveZeros::Bool=false)
     # Removing trailing and leading zero speed values from data
     function f(V::Vector{Float32})
@@ -277,14 +281,27 @@ function calculateAverageSpeed(;data::Union{Nothing, typeof(StructArray(Position
     end
 end
 
-#helper function
+# helper function
 function transformVecToString(v::Vector{T}) where T <: Number
     s = String("")
     for n ∈ v s = s*string(n)*" " end
     return s
 end
+
+
 export saveDataToFile
+"""
+This function saves given data to a simple .data file. 
+
+# Arguments 
+- `data::Union{StructArray, Matrix}`: Positional data in matrix form, or a struct array containing PositionlData type. 
+- `filename::String`: The name of the resulting file.
+
+# Optional Parameters
+- `correctOffset::Bool=false`: Correct gyroscope offset. 
+"""
 function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; correctOffset::Bool=false)
+    # only position if data is a matrix
     if data isa Matrix
         @info "Save positional [x, y, z] data in file."
 
@@ -294,6 +311,7 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; corr
                 write(io, string(data[1, i])*" "*string(data[2, i])*" "*string(data[3, i])*"\n");
             end
         end;
+    # complete set of positional information
     elseif data isa StructArray
         @info "Save sensor data from struct in file."
 
@@ -333,22 +351,41 @@ function saveDataToFile(data::Union{StructArray, Matrix}, filename::String; corr
 end
 
 export extractPositionFromPathImage
+"""
+This function extracts a trajectory from an image of a path. This path should be marked in red and only with a width of 1px.
+
+# Arguments
+- `path::String`: The path to the image file.
+- `startPos::Tuple{Int, Int}`: The starting position in the image in pixel coordinates.
+- `pixelSize::Float32`: The area in m^2 one pixel corresponds to.
+- `filename::String`: The name of the resulting file.
+
+# Optional Arguments
+- `angleToRotate::Float32`: Optional rotation in the plane that can be applied to the trajectory. 
+
+# Returns 
+- `Matrix{Float32}`: Matrix of extracted positions.
+"""
 function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, pixelSize::Float32, filename::String; angleToRotate::Float32=Float32(0.0))
 	img = load(path)
 
+    # Matrix storing the pixel positions of the path
     pxlPositions = Matrix{Float32}(undef, 2, 0)
+    # Vector storing the already visited pixel positions
     alreadyVisited = Vector{Tuple{Int, Int}}(undef, 0)
 
     currentPos = startPos
     found = true
 
     while found
+        # assume no new pixel position is found
         found = false    
+
+        # Check for all possible candidates in neighborhood of current pos
         candidates = Vector{Tuple{Int, Int}}(undef, 0)
         for x ∈ -1:1
             for y ∈ -1:1
                 if x == 0 && y == 0 continue end
-                #println(img[currentPos[1]+x, currentPos[2]+y].r)
                 if img[currentPos[1]+x, currentPos[2]+y].r >= 0.5 && !((currentPos[1]+x, currentPos[2]+y) in alreadyVisited)
                     push!(alreadyVisited, currentPos)
                     push!(alreadyVisited, (currentPos[1]+x, currentPos[2]+y))
@@ -357,6 +394,7 @@ function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, p
                 end
             end
         end
+        # Check fisability of candidates
         if length(candidates) == 1
             currentPos = candidates[1]
             pxlPositions = hcat(pxlPositions, [currentPos[1], currentPos[2]])
@@ -371,15 +409,16 @@ function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, p
         end
     end
 
+    # print out to user ending position to verify whole path was captured
     @info "End Pixel: $(pxlPositions[:, end])"
 
     # Now calculate the dimensions with the pixel size
 
-    # define start position as zero
+    # define start position as zero and transform data
     realPositions = pxlPositions .- pxlPositions[:, 1]
     realPositions = realPositions .* [pixelSize, pixelSize]
 
-    # 55px ~ 80cm => 1 px ~ 1.4545
+    # for example: known object has 55px in image ~ 80cm in real life => 1 px ~ 1.4545
     # Save real positions matrix as data file 
     open(filename*".data", "w") do io    
         for i ∈ 1:size(realPositions)[2]
@@ -404,6 +443,13 @@ function extractPositionFromPathImage(path::String, startPos::Tuple{Int, Int}, p
 end
 
 export modifyTruePos
+"""
+Modify the ground truth value with this function.
+
+# Arguments 
+- `filename::String`: Name of .data file to load containing the ground truth information. 
+- `transform::Matrix{Float64}`: A 3x3 transform matrix in homogenous coordinates.
+"""
 function modifyTruePos(filename::String, transform::Matrix{Float64})
     lines = Vector{String}(undef, 0)
     try
@@ -436,7 +482,10 @@ include("Sensorfusion.jl")
 include("HillClimbing.jl")
 include("DataExtractor.jl")
 include("ArbitraryFunctions.jl")
+
+# global train data vector
 trainData = Vector{Tuple{Int64, typeof(StructArray(PositionalData[])), Union{Nothing, Matrix{Float32}}}}(undef, 0);
+# global initial parameters
 initialParameters = Vector{PredictionParameters}(undef, 0);
 
 end # module

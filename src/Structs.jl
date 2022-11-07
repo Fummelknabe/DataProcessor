@@ -1,6 +1,22 @@
+# This file contains descriptions of several structs.
+
 export PositionalData
 """
-Struct to store the data acquired by the AT-RP
+Struct to store the positional data acquired by the AT-RP.
+
+# Fields 
+- `steerAngle::Integer`: The steering angle as set in control of the robot. 
+- `sensorAngle::Integer`: The steer angle as reported by the steer sensor. 
+- `maxSpeed::Float32`: Max speed of the robt (19-40) as arbitrary speed value. 
+- `sensorSpeed::Float32`: The speed measured by the wheel encoder. 
+- `cameraPos::Vector{Float32}`: The position as estimated by the camera.
+- `cameraOri::Vector{Float32}`: The camera orientation as quaternion.
+- `imuGyro::Vector{Float32}`: The angular velocity in all 3 axis of gyroscope.
+- `imuAcc::Vector{Float32}`: The acceleration in all 3 axis of accelerometer.
+- `imuMag::Vector{Float32}`: The magnetic field strength in all 3 axis of magnetometer.
+- `deltaTime::Float32`: The time passed since last state update. 
+- `cameraConfidence::Float32`: The camera confidence value as reported by VO-System.
+- `command::String`: The command send to the robot. 
 """
 mutable struct PositionalData
     steerAngle::Integer
@@ -20,6 +36,19 @@ mutable struct PositionalData
 end
 
 export PositionalState
+"""
+This struct describes the positional state used throughout the project. 
+# Fields
+- `position::Vector{Float32}`: The position of the robot.
+- `v::Float32`: The speed value.
+- `Ψ::Float32`: The yaw angle.
+- `θ::Float32`: The pitch angle. 
+- `ϕ::Float32`: The roll angle.
+- `P_c::Matrix{Float32}`: The covariance matrix for the KF updating camera data.
+- `P_g::Matrix{Float32}`: The covariance matrix for the KF updating gyroscope data.
+- `Σ::Matrix{Float32}`: The covariance matrix for the UKF.
+- `Χ::Vector{Vector{Float32}}`: The sigma points for the UKF.
+"""
 mutable struct PositionalState
     position::Vector{Float32}
     v::Float32    
@@ -33,6 +62,9 @@ mutable struct PositionalState
 end
 
 export PredictionParameters
+"""
+This struct holds the parameters that influence the estimation.
+"""
 mutable struct PredictionParameters
     kalmanFilterCamera::Bool
     kalmanFilterGyro::Bool
@@ -58,7 +90,6 @@ mutable struct PredictionParameters
 
     # Beginning parameters (Maybe change with random restart)
     PredictionParameters() = new(false, false, true, 5, false, 5, false, 1.0, 0.33, 0.66, 0.0, 0.1, 0.0, 0.1, 0.0, 0.1, 1.0, 1/3, false, 1.0, 0.003)
-    #PredictionParameters() = new(false, false, false, 5, false, 5, false, 1.0, 0.33, 0.66, 0.0, 0.1, 0.0, 0.1, 0.0, 0.1, 1.0, 1/3, false, 1.0, 0.003)
 
     PredictionParameters(params::PredictionParameters) = new(
         params.kalmanFilterCamera,
